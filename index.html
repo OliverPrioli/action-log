@@ -121,16 +121,20 @@
   }
   .switch-btn:hover { text-decoration: underline; }
 
-  .leds { display: flex; gap: 12px; flex-wrap: wrap; }
-  .led {
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 10px 16px; min-width: 106px;
-  }
-  .led .v { font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 600; line-height: 1.1; }
-  .led .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-top: 2px; }
+  .leds { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .led { display: flex; align-items: baseline; gap: 5px; }
+  .led .v { font-family: 'Geist Mono', monospace; font-size: 21px; font-weight: 600; line-height: 1.1; }
+  .led .l { font-size: 11px; color: var(--muted); }
   .led.ok .v { color: var(--accent-hi); }
   .led.warn .v { color: var(--amber); }
   .led.bad .v { color: var(--red); }
+  .led.zero .v { color: var(--muted); opacity: .55; }
+
+  .progresso { width: 128px; }
+  .progresso .trilho { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progresso .barra { height: 100%; background: var(--accent-hi); border-radius: 3px;
+                      transition: width .35s ease; }
+  .progresso .rot { font-size: 10.5px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
 
   /* ===== Toolbar / filtros ===== */
   main { max-width: 1440px; margin: 0 auto; padding: 22px 28px 60px; }
@@ -158,13 +162,16 @@
   button.ghost { background: transparent; }
   button.danger:hover { border-color: var(--red); color: var(--red); }
 
-  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-  .fgroup { position: relative; }
-  .fgroup > button.fbtn { padding: 8px 13px; font-size: 12.5px; }
-  .fgroup > button.fbtn .count {
-    background: var(--accent); color: var(--accent-ink); border-radius: 20px;
-    font-size: 10.5px; padding: 1px 7px; font-family: 'Geist Mono', monospace;
+  /* Funil no cabeçalho da coluna, como no Excel */
+  th .funil {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 5px; padding: 2px; border: 0; background: none; cursor: pointer;
+    color: var(--muted); border-radius: 4px; vertical-align: middle; line-height: 1;
   }
+  th .funil:hover { color: var(--text); background: rgba(255,255,255,.09); }
+  th .funil.ativo { color: var(--accent-ink); background: var(--accent); }
+  th .funil .count { font-family: 'Geist Mono', monospace; font-size: 9.5px; margin-left: 2px; }
+  .fgroup { position: relative; display: inline-flex; }
   .fmenu {
     position: absolute; z-index: 40; top: calc(100% + 6px); left: 0;
     background: var(--panel-2); border: 1px solid var(--line);
@@ -175,7 +182,17 @@
   .fmenu label { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; cursor: pointer; font-size: 13px; }
   .fmenu label:hover { background: var(--accent-soft); }
   .fmenu input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
-  .clear-filters { font-size: 12px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 8px 6px; }
+  .fmenu .rodape { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 5px; }
+  .fmenu .fcampo { display: flex; flex-direction: column; gap: 4px; padding: 4px; min-width: 190px; }
+  .fmenu .fcampo .rot { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .fmenu .fcampo input { padding: 7px 9px; border-radius: 7px; font: inherit; font-size: 12.5px; width: 100%; }
+  .fmenu .rodape button { width: 100%; font-size: 12px; padding: 6px; }
+
+  .toolbar { align-items: center; }
+  .icon-btn { padding: 8px 9px !important; display: inline-flex; align-items: center; }
+  .menu-arq { position: relative; display: inline-flex; }
+  #limparFiltros { font-size: 12px; color: var(--muted); background: none; border: none;
+                   cursor: pointer; padding: 6px 4px; white-space: nowrap; }
   .clear-filters:hover { color: var(--accent-hi); }
 
   /* ===== Tabela ===== */
@@ -254,7 +271,7 @@
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     padding-bottom: 14px; max-width: none;
   }
-  body.tv .toolbar, body.tv .filters { flex-shrink: 0; }
+  body.tv .toolbar { flex-shrink: 0; }
   body.tv .table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   body.tv .tv-bar { flex-shrink: 0; margin: 0; border-radius: 0;
                     border-bottom: 1px solid var(--line); }
@@ -358,6 +375,24 @@
   .campo label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
   .campo .dica { font-size: 11px; color: var(--muted); opacity: .8; }
   .userbox { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: .85; }
+  .live { display: inline-flex; align-items: center; }
+  .live .pt { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+
+  .menu-user { position: relative; display: inline-flex; }
+  .user-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0;
+              color: inherit; font: inherit; font-size: 12px; cursor: pointer; padding: 2px 4px;
+              border-radius: 6px; opacity: .85; }
+  .user-btn:hover { opacity: 1; background: rgba(255,255,255,.06); }
+  .user-btn .seta { font-size: 9px; opacity: .7; }
+  .menu-drop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+               background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+               padding: 5px; min-width: 190px; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+               display: flex; flex-direction: column; }
+  .menu-drop button { background: none; border: 0; color: inherit; font: inherit; font-size: 12.5px;
+                      text-align: left; padding: 8px 10px; border-radius: 7px; cursor: pointer; }
+  .menu-drop button:hover { background: rgba(255,255,255,.07); }
+  .live.on  .pt { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+  .live.off .pt { background: #d97706; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -437,17 +472,28 @@
         <h1 class="brand-title">Action <em>Log</em></h1>
         <div class="brand-sub">
           <span id="predioLabel"></span>
-          <button class="switch-btn" onclick="trocarPredio()">trocar</button>
-          <span class="userbox"><span id="userLabel"></span><button class="switch-btn" onclick="abrirTrocaSenha()">trocar senha</button><button class="switch-btn" onclick="sair()">sair</button></span>
+          <span class="live" id="liveTag" title="Conexão em tempo real"><span class="pt"></span></span>
+          <span class="menu-user">
+            <button class="user-btn" id="userBtn" onclick="toggleMenuUser(event)">
+              <span id="userLabel"></span><span class="seta">▾</span>
+            </button>
+            <div class="menu-drop" id="menuUser" hidden>
+              <button id="miTrocar" onclick="fecharMenuUser(); trocarPredio()">Trocar empreendimento</button>
+              <button onclick="fecharMenuUser(); abrirTrocaSenha()">Trocar senha</button>
+              <button onclick="fecharMenuUser(); sair()">Sair</button>
+            </div>
+          </span>
         </div>
       </div>
     </div>
     <div class="leds">
-      <div class="led"><div class="v" id="ledTotal">0</div><div class="l">Total</div></div>
-      <div class="led warn"><div class="v" id="ledAbertas">0</div><div class="l">Abertas</div></div>
-      <div class="led bad"><div class="v" id="ledVencidas">0</div><div class="l">Vencidas</div></div>
-      <div class="led bad"><div class="v" id="ledCriticas">0</div><div class="l">Críticas abertas</div></div>
-      <div class="led ok"><div class="v" id="ledConcluidas">0%</div><div class="l">Concluídas</div></div>
+      <div class="led warn" id="boxAbertas" title="Ações que ainda não foram concluídas"><span class="v" id="ledAbertas">0</span><span class="l">abertas</span></div>
+      <div class="led bad" id="boxVencidas" title="Ações abertas com previsão já passada"><span class="v" id="ledVencidas">0</span><span class="l">vencidas</span></div>
+      <div class="led bad" id="boxCriticas" title="Ações abertas com prioridade Crítica"><span class="v" id="ledCriticas">0</span><span class="l">críticas</span></div>
+      <div class="progresso" id="boxProgresso">
+        <div class="trilho"><div class="barra" id="barraConcl" style="width:0%"></div></div>
+        <div class="rot" id="rotConcl">—</div>
+      </div>
     </div>
   </div>
 </header>
@@ -463,14 +509,25 @@
       Nova ação
     </button>
     <button id="btnTv" onclick="toggleTv()">Modo apresentação</button>
-    <button id="btnReload" onclick="recarregar()">Atualizar</button>
-    <button onclick="exportJSON()">Exportar JSON</button>
-    <button onclick="exportCSV()">Exportar CSV</button>
-    <button onclick="document.getElementById('importFile').click()">Importar</button>
+    <button class="icon-btn" id="btnReload" onclick="recarregar()" title="Atualizar" aria-label="Atualizar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+    </button>
+    <span class="menu-arq">
+      <button class="icon-btn" onclick="toggleMenuArq(event)" title="Exportar e importar" aria-label="Exportar e importar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      </button>
+      <div class="menu-drop" id="menuArq" hidden style="left:auto;right:0">
+        <button onclick="fecharMenuArq(); recarregar()">Atualizar</button>
+        <button onclick="fecharMenuArq(); exportCSV()">Exportar CSV</button>
+        <button onclick="fecharMenuArq(); exportJSON()">Exportar JSON</button>
+        <button onclick="fecharMenuArq(); document.getElementById('importFile').click()">Importar</button>
+      </div>
+    </span>
+    <button id="limparFiltros" onclick="limparFiltros()" hidden>Limpar filtros ×</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
   </div>
 
-  <div class="filters" id="filters"></div>
+
 
   <div class="table-wrap">
     <div class="tv-bar">
@@ -660,6 +717,7 @@ let PREDIOS      = [];   // [{ id, nome }] — só os que o usuário pode ver
 let RESPONSAVEIS = [];   // [{ id, nome, predio_id }]
 let usuarioNome  = '';
 let PERFIS       = {};   // user_id -> nome
+let canalAcoes   = null; // assinatura em tempo real
 
 /* =========================================================================
    ESTADO
@@ -700,6 +758,82 @@ async function carregarRecords() {
   if (error) { toast('Erro ao carregar: ' + error.message); return; }
   records = (data || []).map(daLinha);
 }
+
+/* ---------- TEMPO REAL ----------
+   O servidor avisa quando alguém cria, edita ou apaga uma ação.
+   O RLS vale aqui também: cada um só recebe o que pode ver. */
+function marcarLive(estado) {
+  const tag = document.getElementById('liveTag');
+  tag.className = 'live ' + estado;
+  tag.title = estado === 'on'
+    ? 'Ao vivo — atualizando automaticamente'
+    : 'Sem conexão em tempo real — use o botão Atualizar';
+}
+
+function toggleMenuArq(ev) {
+  ev.stopPropagation();
+  const m = document.getElementById('menuArq');
+  m.hidden = !m.hidden;
+}
+function fecharMenuArq() {
+  const m = document.getElementById('menuArq');
+  if (m && !m.hidden) m.hidden = true;
+}
+
+function toggleMenuUser(ev) {
+  ev.stopPropagation();
+  const m = document.getElementById('menuUser');
+  m.hidden = !m.hidden;
+}
+
+function fecharMenuUser() {
+  const m = document.getElementById('menuUser');
+  if (m && !m.hidden) m.hidden = true;
+}
+
+document.addEventListener('click', () => { fecharMenuUser(); fecharMenuArq(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { fecharMenuUser(); fecharMenuArq(); } });
+
+function ligarTempoReal() {
+  if (canalAcoes) db.removeChannel(canalAcoes);
+
+  canalAcoes = db.channel('acoes-ao-vivo')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'acoes' }, aplicarMudanca)
+    .subscribe(status => {
+      marcarLive(status === 'SUBSCRIBED' ? 'on' : 'off');
+    });
+}
+
+/* Aplica a mudança na lista local, sem recarregar tudo */
+function aplicarMudanca(msg) {
+  const { eventType, new: novo, old: velho } = msg;
+
+  if (eventType === 'DELETE') {
+    const i = records.findIndex(r => r.uuid === velho.id);
+    if (i < 0) return;
+    const cod = records[i].id;
+    const meu = records[i].predio_id === predio?.id;
+    records.splice(i, 1);
+    if (meu && velho.id !== ultimaGravacao) toast('Ação ' + cod + ' foi excluída');
+  } else {
+    const reg = daLinha(novo);
+    const i = records.findIndex(r => r.uuid === reg.uuid);
+    if (i >= 0) records[i] = reg; else records.push(reg);
+
+    /* Só avisa sobre o empreendimento aberto, e não sobre a própria edição */
+    if (reg.predio_id === predio?.id && reg.uuid !== ultimaGravacao) {
+      toast(eventType === 'INSERT'
+        ? 'Nova ação ' + reg.id + ' registrada'
+        : 'Ação ' + reg.id + ' foi atualizada');
+    }
+  }
+
+  buildFilters();
+  render();
+}
+
+/* uuid da última ação que EU gravei — evita avisar sobre a própria edição */
+let ultimaGravacao = null;
 
 /* Puxa de novo o que os colegas registraram */
 async function recarregar() {
@@ -869,6 +1003,7 @@ async function fazerLogin() {
 }
 
 async function sair() {
+  if (canalAcoes) { db.removeChannel(canalAcoes); canalAcoes = null; }
   await db.auth.signOut();
   try { localStorage.removeItem(PREDIO_KEY); } catch (e) {}
   location.reload();
@@ -896,6 +1031,7 @@ async function iniciarSessao() {
   await carregarRecords();
 
   document.getElementById('login').hidden = true;
+  ligarTempoReal();
   buildGate();
 
   /* Um único empreendimento: entra direto */
@@ -1012,6 +1148,8 @@ function buildGate() {
 }
 function entrar(p) {
   predio = p;
+  const mi = document.getElementById('miTrocar');
+  if (mi) mi.hidden = PREDIOS.length < 2;
   try { localStorage.setItem(PREDIO_KEY, p.id); } catch (e) {}
   document.getElementById('gate').hidden = true;
   document.getElementById('app').hidden = false;
@@ -1034,65 +1172,182 @@ function trocarPredio() {
 /* =========================================================================
    FILTROS
    ========================================================================= */
+/* tipo: 'lista' = caixas de seleção · 'texto' = contém · 'data' = período · 'num' = faixa */
 const FILTER_DEFS = [
-  { key: 'sistema',     label: 'Sistema' },
-  { key: 'status',      label: 'Status' },
-  { key: 'prioridade',  label: 'Prioridade' },
-  { key: 'categoria',   label: 'Categoria' },
-  { key: 'responsavel', label: 'Responsável' },
+  { key: 'id',             label: 'ID',          tipo: 'texto' },
+  { key: 'prioridade',     label: 'Prioridade',  tipo: 'lista' },
+  { key: 'sistema',        label: 'Sistema',     tipo: 'lista' },
+  { key: 'data',           label: 'Atividade',   tipo: 'data'  },
+  { key: 'atividade',      label: 'Descrição',   tipo: 'texto' },
+  { key: 'diagnostico',    label: 'Diagnóstico', tipo: 'texto' },
+  { key: 'acao',           label: 'Ação',        tipo: 'texto' },
+  { key: 'localizacao',    label: 'Local',       tipo: 'lista' },
+  { key: 'categoria',      label: 'Categoria',   tipo: 'lista' },
+  { key: 'responsavel',    label: 'Responsável', tipo: 'lista' },
+  { key: 'dataProgramada', label: 'Previsão',    tipo: 'data'  },
+  { key: 'dataConclusao',  label: 'Conclusão',   tipo: 'data'  },
+  { key: 'aging',          label: 'Aging',       tipo: 'num'   },
+  { key: 'status',         label: 'Status',      tipo: 'lista' },
 ];
+
+/* Cada tipo guarda seu estado de um jeito */
 const activeFilters = {};
-FILTER_DEFS.forEach(d => activeFilters[d.key] = new Set());
+FILTER_DEFS.forEach(d => {
+  activeFilters[d.key] = d.tipo === 'lista' ? new Set()
+                       : d.tipo === 'texto' ? { txt: '' }
+                       : { de: '', ate: '' };
+});
+
+/* Há algo filtrando nesta coluna? */
+function temFiltro(def) {
+  const f = activeFilters[def.key];
+  if (def.tipo === 'lista') return f.size > 0;
+  if (def.tipo === 'texto') return !!f.txt;
+  return !!(f.de || f.ate);
+}
+
+/* A linha passa no filtro desta coluna? */
+function passaFiltro(r, def) {
+  const f = activeFilters[def.key];
+  if (def.tipo === 'lista') return !f.size || f.has(r[def.key]);
+  if (def.tipo === 'texto') return !f.txt || String(r[def.key] ?? '').toLowerCase().includes(f.txt);
+  if (def.tipo === 'num') {
+    const v = agingDays(r);
+    if (f.de !== '' && (v === null || v < +f.de)) return false;
+    if (f.ate !== '' && (v === null || v > +f.ate)) return false;
+    return true;
+  }
+  const v = r[def.key] || '';
+  if (f.de && (!v || v < f.de)) return false;
+  if (f.ate && (!v || v > f.ate)) return false;
+  return true;
+}
 
 function buildFilters() {
-  const wrap = document.getElementById('filters');
-  wrap.innerHTML = '';
   const base = scoped();
   FILTER_DEFS.forEach(def => {
-    const values = [...new Set(base.map(r => r[def.key]).filter(Boolean))].sort((a,b) => a.localeCompare(b,'pt-BR'));
-    [...activeFilters[def.key]].forEach(v => { if (!values.includes(v)) activeFilters[def.key].delete(v); });
-
-    const g = document.createElement('div');
-    g.className = 'fgroup';
-    const n = activeFilters[def.key].size;
-    g.innerHTML = `
-      <button class="fbtn" type="button">${def.label}
-        ${n ? `<span class="count">${n}</span>` : ''}
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <div class="fmenu">
-        ${values.length
-          ? values.map(v => `<label><input type="checkbox" value="${esc(v)}" ${activeFilters[def.key].has(v) ? 'checked' : ''}> ${esc(v)}</label>`).join('')
-          : `<label style="cursor:default;color:var(--muted)">Sem valores ainda</label>`}
-      </div>`;
-    const btn  = g.querySelector('.fbtn');
-    const menu = g.querySelector('.fmenu');
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      document.querySelectorAll('.fmenu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
-      menu.classList.toggle('open');
-    });
-    menu.addEventListener('click', e => e.stopPropagation());
-    menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        cb.checked ? activeFilters[def.key].add(cb.value) : activeFilters[def.key].delete(cb.value);
-        buildFilters();
-        render();
-        const reopen = [...document.querySelectorAll('.fgroup')]
-          .find(x => x.querySelector('.fbtn').textContent.trim().startsWith(def.label));
-        if (reopen) reopen.querySelector('.fmenu').classList.add('open');
-      });
-    });
-    wrap.appendChild(g);
+    if (def.tipo !== 'lista') return;
+    const values = new Set(base.map(r => r[def.key]).filter(Boolean));
+    [...activeFilters[def.key]].forEach(v => { if (!values.has(v)) activeFilters[def.key].delete(v); });
   });
-  if (Object.values(activeFilters).some(s => s.size)) {
-    const clear = document.createElement('button');
-    clear.className = 'clear-filters';
-    clear.textContent = 'Limpar filtros ×';
-    clear.onclick = () => { Object.values(activeFilters).forEach(s => s.clear()); buildFilters(); render(); };
-    wrap.appendChild(clear);
-  }
+  const btn = document.getElementById('limparFiltros');
+  if (btn) btn.hidden = !FILTER_DEFS.some(temFiltro);
+  buildHead();
 }
+
+function limparFiltros() {
+  FILTER_DEFS.forEach(d => {
+    const f = activeFilters[d.key];
+    if (d.tipo === 'lista') f.clear();
+    else if (d.tipo === 'texto') f.txt = '';
+    else { f.de = ''; f.ate = ''; }
+  });
+  buildFilters();
+  render();
+}
+
+/* Monta o funil de uma coluna, no formato adequado ao tipo de dado */
+function montarFunil(th, def) {
+  const f = activeFilters[def.key];
+  const g = document.createElement('span');
+  g.className = 'fgroup';
+
+  let corpo = '';
+  if (def.tipo === 'lista') {
+    const values = [...new Set(scoped().map(r => r[def.key]).filter(Boolean))]
+                     .sort((a,b) => a.localeCompare(b,'pt-BR'));
+    corpo = values.length
+      ? values.map(v => `<label><input type="checkbox" value="${esc(v)}" ${f.has(v) ? 'checked' : ''}> ${esc(v)}</label>`).join('')
+      : `<label style="cursor:default;color:var(--muted)">Sem valores ainda</label>`;
+  } else if (def.tipo === 'texto') {
+    corpo = `<div class="fcampo">
+        <label class="rot">Contém</label>
+        <input type="text" class="f-txt" value="${esc(f.txt)}" placeholder="digite parte do texto">
+      </div>`;
+  } else if (def.tipo === 'num') {
+    corpo = `<div class="fcampo">
+        <label class="rot">De (dias)</label><input type="number" class="f-de" value="${esc(f.de)}" min="0">
+        <label class="rot">Até (dias)</label><input type="number" class="f-ate" value="${esc(f.ate)}" min="0">
+      </div>`;
+  } else {
+    corpo = `<div class="fcampo">
+        <label class="rot">De</label><input type="date" class="f-de" value="${esc(f.de)}">
+        <label class="rot">Até</label><input type="date" class="f-ate" value="${esc(f.ate)}">
+      </div>`;
+  }
+
+  const ativo = temFiltro(def);
+  const qtd   = def.tipo === 'lista' && f.size ? `<span class="count">${f.size}</span>` : '';
+
+  g.innerHTML = `
+    <button class="funil ${ativo ? 'ativo' : ''}" type="button"
+            title="Filtrar por ${esc(def.label)}" aria-label="Filtrar por ${esc(def.label)}">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>${qtd}
+    </button>
+    <div class="fmenu">${corpo}
+      ${ativo ? `<div class="rodape"><button type="button" class="limpa-col">Limpar esta coluna</button></div>` : ''}
+    </div>`;
+
+  const btn  = g.querySelector('.funil');
+  const menu = g.querySelector('.fmenu');
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.fmenu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
+    menu.classList.toggle('open');
+    const primeiro = menu.querySelector('input[type=text], input[type=date], input[type=number]');
+    if (menu.classList.contains('open') && primeiro) primeiro.focus();
+  });
+  menu.addEventListener('click', e => e.stopPropagation());
+
+  const reabrir = () => {
+    const m = document.querySelector(`th[data-key="${def.key}"] .fmenu`);
+    if (m) m.classList.add('open');
+    return m;
+  };
+
+  menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      cb.checked ? f.add(cb.value) : f.delete(cb.value);
+      buildFilters(); render(); reabrir();
+    });
+  });
+
+  const txt = menu.querySelector('.f-txt');
+  if (txt) {
+    let t;
+    txt.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        f.txt = txt.value.trim().toLowerCase();
+        buildFilters(); render();
+        const m = reabrir();
+        const campo = m && m.querySelector('.f-txt');
+        if (campo) { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }
+      }, 350);
+    });
+  }
+
+  ['de','ate'].forEach(k => {
+    const el = menu.querySelector('.f-' + k);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      f[k] = el.value;
+      buildFilters(); render(); reabrir();
+    });
+  });
+
+  const lc = menu.querySelector('.limpa-col');
+  if (lc) lc.addEventListener('click', () => {
+    if (def.tipo === 'lista') f.clear();
+    else if (def.tipo === 'texto') f.txt = '';
+    else { f.de = ''; f.ate = ''; }
+    buildFilters(); render();
+  });
+
+  th.appendChild(g);
+}
+
 document.addEventListener('click', () => document.querySelectorAll('.fmenu.open').forEach(m => m.classList.remove('open')));
 
 /* =========================================================================
@@ -1141,7 +1396,10 @@ function buildHead() {
     return `<th class="${c.cls || ''}" data-key="${c.key}" data-sortable="${c.sortable}">${c.label}${arrow}</th>`;
   }).join('');
   tr.querySelectorAll('th').forEach(th => {
-    th.addEventListener('click', () => {
+    const def = FILTER_DEFS.find(d => d.key === th.dataset.key);
+    if (def) montarFunil(th, def);
+    th.addEventListener('click', e => {
+      if (e.target.closest('.fgroup')) return;
       if (th.dataset.sortable !== 'true') return;
       const k = th.dataset.key;
       if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
@@ -1163,8 +1421,7 @@ function filtered() {
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   return scoped().filter(r => {
     for (const def of FILTER_DEFS) {
-      const set = activeFilters[def.key];
-      if (set.size && !set.has(r[def.key])) return false;
+      if (!passaFiltro(r, def)) return false;
     }
     if (!q) return true;
     return Object.values(r).some(v => String(v ?? '').toLowerCase().includes(q));
@@ -1242,11 +1499,18 @@ function updateLeds() {
   const vencidas = base.filter(isVencida).length;
   const criticas = base.filter(r => r.prioridade === 'Crítica' && OPEN_STATUSES.includes(r.status)).length;
   const concl    = base.filter(r => r.status === 'Concluído').length;
-  document.getElementById('ledTotal').textContent      = total;
-  document.getElementById('ledAbertas').textContent    = abertas;
-  document.getElementById('ledVencidas').textContent   = vencidas;
-  document.getElementById('ledCriticas').textContent   = criticas;
-  document.getElementById('ledConcluidas').textContent = total ? Math.round(concl / total * 100) + '%' : '0%';
+  const pct = total ? Math.round(concl / total * 100) : 0;
+
+  document.getElementById('ledAbertas').textContent  = abertas;
+  document.getElementById('ledVencidas').textContent = vencidas;
+  document.getElementById('ledCriticas').textContent = criticas;
+
+  /* Zero não precisa gritar em vermelho — só quando há algo a fazer */
+  document.getElementById('boxVencidas').classList.toggle('zero', vencidas === 0);
+  document.getElementById('boxCriticas').classList.toggle('zero', criticas === 0);
+
+  document.getElementById('barraConcl').style.width = pct + '%';
+  document.getElementById('rotConcl').textContent   = `${concl} de ${total} concluídas · ${pct}%`;
 }
 
 /* =========================================================================
@@ -1432,6 +1696,8 @@ async function saveRecord() {
   if (res.error) { toast('Não salvou: ' + res.error.message); return; }
 
   const novo = daLinha(res.data);
+  ultimaGravacao = novo.uuid;
+  setTimeout(() => { if (ultimaGravacao === novo.uuid) ultimaGravacao = null; }, 4000);
   const i = records.findIndex(r => r.uuid === novo.uuid);
   if (i >= 0) records[i] = novo; else records.push(novo);
 
@@ -1446,6 +1712,8 @@ async function deleteRecord() {
   const alvo = records.find(r => r.uuid === editingId);
   if (!confirm('Excluir a ação ' + alvo.id + '? Esta operação não pode ser desfeita.')) return;
 
+  ultimaGravacao = editingId;
+  setTimeout(() => { ultimaGravacao = null; }, 4000);
   const { error } = await db.from('acoes').delete().eq('id', editingId);
   if (error) { toast('Não excluiu: ' + error.message); return; }
 
@@ -1562,6 +1830,14 @@ document.getElementById('f_responsavel').addEventListener('change', e => {
     if (e.key === 'Enter') confirmarTrocaSenha();
     if (e.key === 'Escape') fecharTrocaSenha();
   });
+});
+
+/* Celular que dormiu ou aba em segundo plano derruba a conexão: reconecta ao voltar */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && canalAcoes && predio) {
+    ligarTempoReal();
+    recarregar();
+  }
 });
 
 /* Sessão fica guardada pelo próprio Supabase: quem já entrou não loga de novo */

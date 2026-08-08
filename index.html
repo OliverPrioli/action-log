@@ -543,11 +543,12 @@
         <button id="btnXlsxFiltro" onclick="fecharMenuArq(); exportXLSX(true)" hidden>Exportar Excel (só o filtrado)</button>
         <button onclick="fecharMenuArq(); exportCSV()">Exportar CSV</button>
         <button onclick="fecharMenuArq(); exportJSON()">Exportar JSON</button>
-        <button onclick="fecharMenuArq(); document.getElementById('importFile').click()">Importar</button>
+        <button onclick="fecharMenuArq(); baixarModelo()">Baixar modelo de importação</button>
+        <button onclick="fecharMenuArq(); document.getElementById('importFile').click()">Importar planilha</button>
       </div>
     </span>
     <button id="limparFiltros" onclick="limparFiltros()" hidden>Limpar filtros ×</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <input type="file" id="importFile" accept=".xlsx,.json" style="display:none" onchange="importarArquivo(event)">
   </div>
 
 
@@ -720,6 +721,18 @@
     <div class="modal-actions">
       <button class="ghost" onclick="fecharTrocaSenha()">Cancelar</button>
       <button class="primary" id="t_btn" onclick="confirmarTrocaSenha()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL — RESULTADO DA IMPORTAÇÃO ===================== -->
+<div class="overlay" id="overlayImport">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="impTitle">
+    <h2 id="impTitle">Importação</h2>
+    <div id="impCorpo" style="max-height:50vh;overflow:auto;font-size:13px;line-height:1.55"></div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="fecharImport()">Fechar</button>
+      <button class="primary" id="impConfirma" hidden onclick="confirmarImport()">Importar</button>
     </div>
   </div>
 </div>
@@ -1886,6 +1899,135 @@ async function exportXLSX(apenasFiltrado) {
   toast(`${lista.length} registro(s) exportado(s)`);
 }
 
+
+/* ---------- MODELO DE IMPORTAÇÃO ---------- */
+const MODELO_COLS = [
+  { h: 'Sistema*',     w: 15, obr: true,  lista: () => ['SDAI','SAI','CFTV','SCA','BMS','VoIP','SAP','Infraestrutura','Outros'] },
+  { h: 'Atividade*',   w: 38, obr: true },
+  { h: 'Local*',       w: 22, obr: true },
+  { h: 'Diagnóstico',  w: 38 },
+  { h: 'Ação',         w: 38 },
+  { h: 'Data',         w: 13, dica: 'dd/mm/aaaa' },
+  { h: 'Prioridade',   w: 13, lista: () => ['Baixa','Média','Alta','Crítica'] },
+  { h: 'Categoria',    w: 15, lista: () => ['Corretiva','Preventiva','Melhoria','Inspeção','Administrativa'] },
+  { h: 'Status',       w: 20, lista: () => ['Aberto','Em andamento','Aguardando terceiros','Concluído','Cancelado'] },
+  { h: 'Responsável',  w: 20, lista: () => responsaveisDoPredio().map(r => r.nome) },
+  { h: 'Previsão',     w: 13, dica: 'dd/mm/aaaa' },
+];
+
+async function baixarModelo() {
+  if (typeof ExcelJS === 'undefined') return toast('Biblioteca do Excel não carregou. Recarregue a página.');
+
+  const wb = new ExcelJS.Workbook();
+
+  /* --- Aba 1: instruções --- */
+  const ins = wb.addWorksheet('Leia primeiro');
+  ins.columns = [{ width: 100 }];
+  const linhas = [
+    [`Modelo de importação — ${predio.nome}`, 'titulo'],
+    ['', ''],
+    ['Como preencher', 'sub'],
+    ['1. Vá para a aba "Preencher" (embaixo, ao lado desta).', ''],
+    ['2. Cada linha é uma atividade. Preencha uma por linha, sem pular linhas.', ''],
+    ['3. As colunas com * são obrigatórias: Sistema, Atividade e Local.', ''],
+    ['4. Nas colunas coloridas, clique na célula e escolha na listinha que aparece.', ''],
+    ['5. Apague as linhas de exemplo antes de enviar.', ''],
+    ['6. Salve e envie o arquivo. Não mude os nomes das colunas.', ''],
+    ['', ''],
+    ['O que vai em cada coluna', 'sub'],
+    ['Sistema* — a que sistema predial a atividade pertence (CFTV, SCA, SDAI...).', ''],
+    ['Atividade* — em uma frase, o que precisa ser feito ou o que aconteceu.', ''],
+    ['Local* — onde é. Ex.: "2º Subsolo", "Térreo", "CCO", "Cobertura".', ''],
+    ['Diagnóstico — o que foi identificado. Pode deixar em branco.', ''],
+    ['Ação — o que já foi feito. Pode deixar em branco.', ''],
+    ['Data — quando aconteceu. Em branco, entra a data de hoje.', ''],
+    ['Prioridade — em branco, entra como Baixa.', ''],
+    ['Categoria — em branco, entra como Corretiva.', ''],
+    ['Status — em branco, entra como Aberto.', ''],
+    ['Responsável — quem responde pela atividade. Se não estiver na lista, digite o nome.', ''],
+    ['Previsão — prazo esperado. Obrigatória se a prioridade for Média, Alta ou Crítica.', ''],
+    ['', ''],
+    ['Importante', 'sub'],
+    ['• Se o Status for "Concluído", preencha Diagnóstico e Ação — senão a linha é recusada.', ''],
+    ['• Datas no formato dd/mm/aaaa.', ''],
+    ['• Se algo estiver errado, o sistema avisa qual linha e qual o problema antes de importar.', ''],
+    ['', ''],
+    [`Este modelo foi gerado para ${predio.nome} em ${fmtBR(todayISO())}.`, 'nota'],
+  ];
+  linhas.forEach(([txt, tipo]) => {
+    const r = ins.addRow([txt]);
+    const c = r.getCell(1);
+    c.alignment = { wrapText: true, vertical: 'middle' };
+    if (tipo === 'titulo') { c.font = { name:'Arial', size:14, bold:true, color:{argb:'FF1F3864'} }; r.height = 24; }
+    else if (tipo === 'sub') { c.font = { name:'Arial', size:11, bold:true }; r.height = 20; }
+    else if (tipo === 'nota') c.font = { name:'Arial', size:9, italic:true, color:{argb:'FF808080'} };
+    else c.font = { name:'Arial', size:10 };
+  });
+
+  /* --- Aba 2: preencher --- */
+  const ws = wb.addWorksheet('Preencher', { views: [{ state:'frozen', ySplit:1 }] });
+  ws.columns = MODELO_COLS.map(c => ({ header: c.h, width: c.w }));
+
+  const cab = ws.getRow(1);
+  cab.height = 24;
+  cab.eachCell((cel, i) => {
+    const col = MODELO_COLS[i - 1];
+    cel.font      = { name:'Arial', size:10, bold:true, color:{argb:'FFFFFFFF'} };
+    cel.fill      = { type:'pattern', pattern:'solid',
+                      fgColor:{ argb: col.obr ? 'FF1F3864' : 'FF4A6488' } };
+    cel.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
+    if (col.dica) cel.note = col.dica;
+  });
+
+  /* Exemplos, pra não restar dúvida do formato */
+  const exemplos = [
+    ['CFTV','Câmera 12 sem imagem','2º Subsolo','Câmera sem sinal desde a manhã','', fmtBR(todayISO()),'Alta','Corretiva','Aberto','CompaSSS', fmtBR(todayISO())],
+    ['SCA','Cadastrar biometria dos novos porteiros','Térreo','','', '', '', '', '', '', ''],
+  ];
+  exemplos.forEach(ex => {
+    const r = ws.addRow(ex);
+    r.eachCell({ includeEmpty:true }, cel => {
+      cel.font = { name:'Arial', size:10, italic:true, color:{argb:'FF9C9C9C'} };
+      cel.alignment = { vertical:'middle', wrapText:true };
+    });
+  });
+
+  /* Listas suspensas até a linha 400 */
+  MODELO_COLS.forEach((col, i) => {
+    if (!col.lista) return;
+    const vals = col.lista().filter(Boolean);
+    if (!vals.length) return;
+    const letra = ws.getColumn(i + 1).letter;
+    for (let l = 2; l <= 400; l++) {
+      ws.getCell(`${letra}${l}`).dataValidation = {
+        type: 'list', allowBlank: true, showErrorMessage: false,
+        formulae: ['"' + vals.join(',').replace(/"/g,'') + '"'],
+      };
+    }
+    /* Destaque suave nas colunas com lista */
+    for (let l = 4; l <= 60; l++) {
+      ws.getCell(`${letra}${l}`).fill =
+        { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF2F7FF' } };
+    }
+  });
+
+  /* Marca de qual empreendimento é este modelo */
+  const ctrl = wb.addWorksheet('_controle');
+  ctrl.addRow(['empreendimento', predio.nome]);
+  ctrl.addRow(['gerado_em', todayISO()]);
+  ctrl.state = 'veryHidden';
+
+  const buf = await wb.xlsx.writeBuffer();
+  const url = URL.createObjectURL(new Blob([buf],
+    { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `modelo_action_log_${slug(predio.nome)}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Modelo baixado');
+}
+
 function exportCSV() {
   const cols = ['id','empreendimento','prioridade','sistema','data','atividade','diagnostico','acao',
                 'localizacao','categoria','responsavel','dataProgramada','dataConclusao','status',
@@ -1898,11 +2040,186 @@ function exportCSV() {
   download(`action_log_${slug(predio.nome)}_${stamp()}.csv`, '\uFEFF' + [cols.join(';'), ...rows].join('\n'), 'text/csv;charset=utf-8');
   toast('CSV exportado');
 }
-async function importJSON(ev) {
+
+/* ---------- IMPORTAÇÃO ---------- */
+let pendenteImport = null;
+
+function fecharImport() {
+  document.getElementById('overlayImport').classList.remove('open');
+  pendenteImport = null;
+}
+
+function abrirImport(titulo, html, podeImportar) {
+  document.getElementById('impTitle').textContent = titulo;
+  document.getElementById('impCorpo').innerHTML = html;
+  document.getElementById('impConfirma').hidden = !podeImportar;
+  document.getElementById('overlayImport').classList.add('open');
+}
+
+const SIS_OK  = ['SDAI','SAI','CFTV','SCA','BMS','VoIP','SAP','Infraestrutura','Outros'];
+const PRIO_OK = ['Baixa','Média','Alta','Crítica'];
+const CAT_OK  = ['Corretiva','Preventiva','Melhoria','Inspeção','Administrativa'];
+const ST_OK   = ['Aberto','Em andamento','Aguardando terceiros','Concluído','Cancelado'];
+
+/* Aceita dd/mm/aaaa, aaaa-mm-dd ou data do Excel */
+function leData(v) {
+  if (!v) return null;
+  if (v instanceof Date) {
+    return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return undefined;   // formato não reconhecido
+}
+
+async function importarArquivo(ev) {
   const file = ev.target.files[0];
-  if (!file) return;
-  const texto = await file.text();
   ev.target.value = '';
+  if (!file) return;
+
+  if (file.name.toLowerCase().endsWith('.json')) return importJSONArquivo(file);
+  if (typeof ExcelJS === 'undefined') return toast('Biblioteca do Excel não carregou. Recarregue a página.');
+
+  const wb = new ExcelJS.Workbook();
+  try { await wb.xlsx.load(await file.arrayBuffer()); }
+  catch (e) { return abrirImport('Não deu para ler', '<p>O arquivo não parece ser uma planilha válida.</p>', false); }
+
+  const ws = wb.getWorksheet('Preencher') || wb.worksheets[0];
+  if (!ws) return abrirImport('Planilha vazia', '<p>Não encontrei nenhuma aba com dados.</p>', false);
+
+  /* Confere se o modelo é deste empreendimento */
+  const ctrl = wb.getWorksheet('_controle');
+  const dono = ctrl ? String(ctrl.getCell('B1').value || '').trim() : '';
+  if (dono && dono !== predio.nome) {
+    return abrirImport('Empreendimento diferente',
+      `<p>Este modelo foi gerado para <b>${esc(dono)}</b>, mas você está em <b>${esc(predio.nome)}</b>.</p>
+       <p>Troque de empreendimento ou baixe um modelo novo.</p>`, false);
+  }
+
+  /* Mapeia as colunas pelo nome do cabeçalho */
+  const idx = {};
+  ws.getRow(1).eachCell((cel, i) => {
+    const nome = String(cel.value || '').replace('*','').trim().toLowerCase();
+    if (nome) idx[nome] = i;
+  });
+  for (const obr of ['sistema','atividade','local']) {
+    if (!idx[obr]) return abrirImport('Colunas não encontradas',
+      `<p>Não achei a coluna <b>${obr}</b>. Use o modelo em "Baixar modelo de importação".</p>`, false);
+  }
+
+  const val = (row, nome) => {
+    const c = idx[nome] ? row.getCell(idx[nome]).value : null;
+    if (c === null || c === undefined) return '';
+    if (typeof c === 'object' && c.text)   return String(c.text).trim();
+    if (typeof c === 'object' && c.result) return String(c.result).trim();
+    if (c instanceof Date) return c;
+    return String(c).trim();
+  };
+
+  const ok = [], erros = [];
+  ws.eachRow((row, n) => {
+    if (n === 1) return;
+
+    const sistema   = String(val(row,'sistema') || '');
+    const atividade = String(val(row,'atividade') || '');
+    const local     = String(val(row,'local') || '');
+    if (!sistema && !atividade && !local) return;            // linha vazia
+
+    /* Não importa as linhas de exemplo do modelo */
+    if (atividade === 'Câmera 12 sem imagem' ||
+        atividade === 'Cadastrar biometria dos novos porteiros') return;
+
+    const p = [];
+    if (!sistema)   p.push('Sistema em branco');
+    if (!atividade) p.push('Atividade em branco');
+    if (!local)     p.push('Local em branco');
+    if (sistema && !SIS_OK.includes(sistema)) p.push(`Sistema "${sistema}" não existe`);
+
+    const prio = String(val(row,'prioridade') || '') || 'Baixa';
+    const cat  = String(val(row,'categoria')  || '') || 'Corretiva';
+    const st   = String(val(row,'status')     || '') || 'Aberto';
+    if (!PRIO_OK.includes(prio)) p.push(`Prioridade "${prio}" não existe`);
+    if (!CAT_OK.includes(cat))   p.push(`Categoria "${cat}" não existe`);
+    if (!ST_OK.includes(st))     p.push(`Status "${st}" não existe`);
+
+    const data = leData(val(row,'data'));
+    const prev = leData(val(row,'previsão') ?? val(row,'previsao'));
+    if (data === undefined) p.push('Data em formato não reconhecido');
+    if (prev === undefined) p.push('Previsão em formato não reconhecido');
+
+    const diag = String(val(row,'diagnóstico') || val(row,'diagnostico') || '');
+    const acao = String(val(row,'ação') || val(row,'acao') || '');
+    if (st === 'Concluído' && (!diag || !acao))
+      p.push('Status Concluído exige Diagnóstico e Ação preenchidos');
+    if (prio !== 'Baixa' && !prev)
+      p.push(`Prioridade ${prio} exige Previsão`);
+
+    if (p.length) { erros.push({ n, p }); return; }
+
+    ok.push({
+      predio_id: predio.id, sistema, atividade, localizacao: local,
+      diagnostico: diag || null, acao: acao || null,
+      data_atividade: data || todayISO(), previsao: prev || null,
+      prioridade: prio, categoria: cat, status: st,
+      responsavel: String(val(row,'responsável') || val(row,'responsavel') || ''),
+      data_conclusao: st === 'Concluído' ? (data || todayISO()) : null,
+    });
+  });
+
+  if (!ok.length && !erros.length)
+    return abrirImport('Nada para importar', '<p>Não encontrei nenhuma linha preenchida.</p>', false);
+
+  let html = '';
+  if (ok.length)   html += `<p style="color:var(--accent-hi)"><b>${ok.length} linha(s) prontas para importar.</b></p>`;
+  if (erros.length) {
+    html += `<p style="color:var(--red)"><b>${erros.length} linha(s) com problema — não serão importadas:</b></p><ul style="margin:6px 0 0 18px">`;
+    erros.slice(0, 25).forEach(e => { html += `<li>Linha ${e.n}: ${esc(e.p.join('; '))}</li>`; });
+    if (erros.length > 25) html += `<li>… e mais ${erros.length - 25}.</li>`;
+    html += '</ul>';
+  }
+
+  pendenteImport = ok;
+  abrirImport('Conferência antes de importar', html, ok.length > 0);
+}
+
+async function confirmarImport() {
+  if (!pendenteImport || !pendenteImport.length) return;
+  const btn = document.getElementById('impConfirma');
+  btn.disabled = true; btn.textContent = 'Importando…';
+
+  /* Cria os responsáveis que ainda não existem */
+  const nomes = [...new Set(pendenteImport.map(l => l.responsavel).filter(Boolean))];
+  const faltando = nomes.filter(n => !responsaveisDoPredio().some(r => r.nome === n));
+  if (faltando.length) {
+    const { data } = await db.from('responsaveis')
+      .insert(faltando.map(nome => ({ nome, predio_id: predio.id, tipo: 'externo' })))
+      .select('id, nome, predio_id');
+    (data || []).forEach(r => RESPONSAVEIS.push(r));
+  }
+
+  const linhas = pendenteImport.map(l => ({
+    ...l,
+    responsavel_id: RESPONSAVEIS.find(r => r.nome === l.responsavel &&
+                     (!r.predio_id || r.predio_id === predio.id))?.id || null,
+  }));
+
+  const { data, error } = await db.from('acoes').insert(linhas).select('*');
+  btn.disabled = false; btn.textContent = 'Importar';
+
+  if (error) return abrirImport('Não deu certo',
+    `<p>O banco recusou a importação:</p><p style="color:var(--red)">${esc(error.message)}</p>`, false);
+
+  (data || []).forEach(row => records.push(daLinha(row)));
+  fecharImport();
+  buildFilters();
+  render();
+  toast(`${data.length} registro(s) importado(s)`);
+}
+
+async function importJSONArquivo(file) {
+  const texto = await file.text();
 
   let data;
   try {

@@ -295,6 +295,9 @@
   .login-form { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; margin: 0 auto; }
   .login-form input { padding: 11px 13px; border-radius: 8px; font: inherit; }
   .login-err { color: #d92d20; font-size: 13px; min-height: 18px; text-align: center; }
+  .campo { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+  .campo label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+  .campo .dica { font-size: 11px; color: var(--muted); opacity: .8; }
   .userbox { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: .85; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -309,11 +312,45 @@
     <p>Entre com seu e-mail corporativo</p>
   </div>
   <div class="login-form">
-    <input type="email" id="l_email" placeholder="e-mail" autocomplete="username">
-    <input type="password" id="l_senha" placeholder="senha" autocomplete="current-password">
+    <div class="campo">
+      <label for="l_email">E-mail</label>
+      <input type="email" id="l_email" autocomplete="username">
+    </div>
+    <div class="campo">
+      <label for="l_senha">Senha</label>
+      <input type="password" id="l_senha" autocomplete="current-password">
+    </div>
     <button class="primary" id="l_btn" onclick="fazerLogin()">Entrar</button>
     <div class="login-err" id="l_err"></div>
   </div>
+</div>
+
+<!-- ===================== TROCA DE SENHA OBRIGATÓRIA ===================== -->
+<div class="gate" id="trocaSenha" hidden>
+  <div class="gate-head">
+    <img class="gate-logo" src="data:image/png;base64,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" alt="CompaSSS">
+    <h1>Defina sua <em>senha</em></h1>
+    <p>Antes de continuar, troque a senha provisória por uma sua.</p>
+  </div>
+  <div class="login-form">
+    <div class="campo">
+      <label for="s_nova">Nova senha</label>
+      <input type="password" id="s_nova" autocomplete="new-password">
+      <span class="dica">Mínimo de 8 caracteres.</span>
+    </div>
+    <div class="campo">
+      <label for="s_conf">Repita a nova senha</label>
+      <input type="password" id="s_conf" autocomplete="new-password">
+      <span class="dica">Só para confirmar que não houve erro de digitação.</span>
+    </div>
+    <button class="primary" id="s_btn" onclick="salvarNovaSenha()">Salvar e entrar</button>
+    <div class="login-err" id="s_err"></div>
+  </div>
+  <p class="gate-note">
+    A senha é pessoal e não fica visível para ninguém, nem para o administrador.
+    Escolha algo que só você saiba.
+  </p>
+  <p class="gate-note"><button class="switch-btn" onclick="sair()">sair da conta</button></p>
 </div>
 
 <!-- ===================== TELA DE SELEÇÃO ===================== -->
@@ -342,7 +379,7 @@
         <div class="brand-sub">
           <span id="predioLabel"></span>
           <button class="switch-btn" onclick="trocarPredio()">trocar</button>
-          <span class="userbox"><span id="userLabel"></span><button class="switch-btn" onclick="sair()">sair</button></span>
+          <span class="userbox"><span id="userLabel"></span><button class="switch-btn" onclick="abrirTrocaSenha()">trocar senha</button><button class="switch-btn" onclick="sair()">sair</button></span>
         </div>
       </div>
     </div>
@@ -501,6 +538,36 @@
       <button class="ghost" onclick="closeModal()">Cancelar</button>
       <button class="danger" id="btnDelete" hidden onclick="deleteRecord()">Excluir</button>
       <button class="primary" id="btnSave" onclick="saveRecord()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL — TROCAR SENHA ===================== -->
+<div class="overlay" id="overlaySenha">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="senhaTitle">
+    <h2 id="senhaTitle">Trocar senha</h2>
+    <p class="req-note">Confirme a senha atual e escolha uma nova, com no mínimo 8 caracteres.</p>
+    <div class="login-form" style="max-width:none">
+      <div class="campo">
+        <label for="t_atual">Senha atual</label>
+        <input type="password" id="t_atual" autocomplete="current-password">
+        <span class="dica">A que você usa hoje para entrar.</span>
+      </div>
+      <div class="campo">
+        <label for="t_nova">Nova senha</label>
+        <input type="password" id="t_nova" autocomplete="new-password">
+        <span class="dica">Mínimo de 8 caracteres, diferente da atual.</span>
+      </div>
+      <div class="campo">
+        <label for="t_conf">Repita a nova senha</label>
+        <input type="password" id="t_conf" autocomplete="new-password">
+        <span class="dica">Só para confirmar que não houve erro de digitação.</span>
+      </div>
+      <div class="login-err" id="t_err"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="fecharTrocaSenha()">Cancelar</button>
+      <button class="primary" id="t_btn" onclick="confirmarTrocaSenha()">Salvar</button>
     </div>
   </div>
 </div>
@@ -687,9 +754,13 @@ async function iniciarSessao() {
   const { data: { user } } = await db.auth.getUser();
   if (!user) return mostrarLogin();
 
-  const { data: perfis } = await db.from('perfis').select('user_id, nome');
+  const { data: perfis } = await db.from('perfis').select('user_id, nome, senha_trocada');
   PERFIS = Object.fromEntries((perfis || []).map(p => [p.user_id, p.nome]));
   usuarioNome = PERFIS[user.id] || user.email;
+
+  /* Senha ainda é a provisória: nada carrega antes da troca */
+  const meu = (perfis || []).find(p => p.user_id === user.id);
+  if (meu && meu.senha_trocada === false) return mostrarTrocaSenha();
   document.getElementById('userLabel').textContent = usuarioNome;
 
   const { data: preds, error } = await db.from('predios').select('id, nome').order('nome');
@@ -712,10 +783,93 @@ async function iniciarSessao() {
   document.getElementById('gate').hidden = false;
 }
 
+function abrirTrocaSenha() {
+  ['t_atual','t_nova','t_conf'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('t_err').textContent = '';
+  document.getElementById('overlaySenha').classList.add('open');
+  document.getElementById('t_atual').focus();
+}
+
+function fecharTrocaSenha() {
+  document.getElementById('overlaySenha').classList.remove('open');
+}
+
+async function confirmarTrocaSenha() {
+  const atual = document.getElementById('t_atual').value;
+  const nova  = document.getElementById('t_nova').value;
+  const conf  = document.getElementById('t_conf').value;
+  const err   = document.getElementById('t_err');
+  const btn   = document.getElementById('t_btn');
+  err.textContent = '';
+
+  if (!atual)          return err.textContent = 'Informe a senha atual.';
+  if (nova.length < 8) return err.textContent = 'A nova senha precisa ter ao menos 8 caracteres.';
+  if (nova !== conf)   return err.textContent = 'As duas senhas novas não são iguais.';
+  if (nova === atual)  return err.textContent = 'A nova senha precisa ser diferente da atual.';
+
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  /* Confirma a identidade antes de trocar: sem a senha atual, não passa */
+  const { data: { user } } = await db.auth.getUser();
+  const { error: eAuth } = await db.auth.signInWithPassword({ email: user.email, password: atual });
+  if (eAuth) {
+    btn.disabled = false; btn.textContent = 'Salvar';
+    return err.textContent = 'Senha atual incorreta.';
+  }
+
+  const { error } = await db.auth.updateUser({ password: nova });
+  btn.disabled = false; btn.textContent = 'Salvar';
+  if (error) return err.textContent = error.message;
+
+  fecharTrocaSenha();
+  toast('Senha alterada');
+}
+
+function mostrarTrocaSenha() {
+  document.getElementById('login').hidden = true;
+  document.getElementById('gate').hidden = true;
+  document.getElementById('app').hidden = true;
+  document.getElementById('trocaSenha').hidden = false;
+  document.getElementById('s_nova').focus();
+}
+
+async function salvarNovaSenha() {
+  const nova = document.getElementById('s_nova').value;
+  const conf = document.getElementById('s_conf').value;
+  const err  = document.getElementById('s_err');
+  const btn  = document.getElementById('s_btn');
+  err.textContent = '';
+
+  if (nova.length < 8)  return err.textContent = 'A senha precisa ter ao menos 8 caracteres.';
+  if (nova !== conf)    return err.textContent = 'As duas senhas não são iguais.';
+
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const { error: e1 } = await db.auth.updateUser({ password: nova });
+  if (e1) {
+    btn.disabled = false; btn.textContent = 'Salvar e entrar';
+    return err.textContent = e1.message.includes('should be different')
+      ? 'A nova senha precisa ser diferente da atual.' : e1.message;
+  }
+
+  const { data: { user } } = await db.auth.getUser();
+  const { error: e2 } = await db.from('perfis')
+    .update({ senha_trocada: true }).eq('user_id', user.id);
+
+  btn.disabled = false; btn.textContent = 'Salvar e entrar';
+  if (e2) return err.textContent = 'Senha alterada, mas houve um erro ao registrar: ' + e2.message;
+
+  document.getElementById('s_nova').value = '';
+  document.getElementById('s_conf').value = '';
+  document.getElementById('trocaSenha').hidden = true;
+  await iniciarSessao();
+}
+
 function mostrarLogin() {
   document.getElementById('login').hidden = false;
   document.getElementById('gate').hidden = true;
   document.getElementById('app').hidden = true;
+  document.getElementById('trocaSenha').hidden = true;
 }
 
 function buildGate() {
@@ -1240,6 +1394,17 @@ document.getElementById('f_responsavel').addEventListener('change', e => {
 ['l_email','l_senha'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') fazerLogin();
+  });
+});
+['s_nova','s_conf'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') salvarNovaSenha();
+  });
+});
+['t_atual','t_nova','t_conf'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmarTrocaSenha();
+    if (e.key === 'Escape') fecharTrocaSenha();
   });
 });
 

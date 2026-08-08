@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
   :root {
     /* ---------------------------------------------------------------
@@ -271,10 +272,13 @@
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     padding-bottom: 14px; max-width: none;
   }
-  body.tv .toolbar { flex-shrink: 0; }
+  body.tv .toolbar { display: none; }
   body.tv .table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  body.tv .tv-bar { flex-shrink: 0; margin: 0; border-radius: 0;
-                    border-bottom: 1px solid var(--line); }
+  body.tv .tv-bar { flex-shrink: 0; margin: 0; border-radius: 0; background: none;
+                    border-bottom: 1px solid var(--line); padding: 7px 12px;
+                    opacity: .6; transition: opacity .2s; }
+  body.tv .tv-bar:hover, body.tv .tv-bar:focus-within { opacity: 1; }
+  .tv-bar .sai { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
   body.tv .tabela-rola { flex: 1; min-height: 0; overflow: auto; }
   /* Cabeçalho das colunas fixo enquanto as linhas rolam */
   body.tv #mainTable thead th {
@@ -300,8 +304,25 @@
   .tv-bar { display: none; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
             padding: 10px 12px; border-radius: 10px; background: var(--panel, rgba(255,255,255,.04)); }
   body.tv .tv-bar { display: flex; }
-  .tv-bar label { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .tv-bar input[type="date"] { padding: 5px 8px; border-radius: 7px; font: inherit; font-size: 13px; }
+  .tv-bar label { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .tv-bar input[type="date"] {
+    padding: 4px 7px; border-radius: 6px; font: inherit; font-size: 12px;
+    background: transparent; border: 1px solid var(--line); color: var(--text);
+    font-family: 'Geist Mono', monospace; color-scheme: dark;
+  }
+  .tv-bar input[type="date"]:hover { border-color: var(--muted); }
+  /* Chrome pinta os campos vazios de azul e o ícone de branco */
+  .tv-bar input[type="date"]::-webkit-datetime-edit-text,
+  .tv-bar input[type="date"]::-webkit-datetime-edit-day-field,
+  .tv-bar input[type="date"]::-webkit-datetime-edit-month-field,
+  .tv-bar input[type="date"]::-webkit-datetime-edit-year-field { color: var(--muted); }
+  .tv-bar input[type="date"]:valid::-webkit-datetime-edit-day-field,
+  .tv-bar input[type="date"]:valid::-webkit-datetime-edit-month-field,
+  .tv-bar input[type="date"]:valid::-webkit-datetime-edit-year-field { color: var(--text); }
+  .tv-bar input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(.55); cursor: pointer; padding: 0; margin-left: 3px;
+  }
+  .tv-bar input[type="date"]::-webkit-calendar-picker-indicator:hover { filter: invert(.85); }
   .row-actions { display: flex; gap: 6px; }
   .row-actions button { padding: 5px 9px; font-size: 11.5px; }
   .row-actions .fin {
@@ -518,6 +539,8 @@
       </button>
       <div class="menu-drop" id="menuArq" hidden style="left:auto;right:0">
         <button onclick="fecharMenuArq(); recarregar()">Atualizar</button>
+        <button onclick="fecharMenuArq(); exportXLSX(false)">Exportar Excel</button>
+        <button id="btnXlsxFiltro" onclick="fecharMenuArq(); exportXLSX(true)" hidden>Exportar Excel (só o filtrado)</button>
         <button onclick="fecharMenuArq(); exportCSV()">Exportar CSV</button>
         <button onclick="fecharMenuArq(); exportJSON()">Exportar JSON</button>
         <button onclick="fecharMenuArq(); document.getElementById('importFile').click()">Importar</button>
@@ -534,7 +557,11 @@
       <label for="tvDesde">Mostrar concluídas desde</label>
       <input type="date" id="tvDesde" onchange="render()">
       <button class="switch-btn" onclick="limparDesde()">limpar</button>
-      <span id="tvResumo" style="font-size:12px;opacity:.75"></span>
+      <span id="tvResumo" style="font-size:11.5px;opacity:.75"></span>
+      <button class="switch-btn sai" onclick="toggleTv()" title="Sair da apresentação">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        sair da apresentação
+      </button>
     </div>
     <div class="tabela-rola">
       <table id="mainTable">
@@ -1230,8 +1257,11 @@ function buildFilters() {
     const values = new Set(base.map(r => r[def.key]).filter(Boolean));
     [...activeFilters[def.key]].forEach(v => { if (!values.has(v)) activeFilters[def.key].delete(v); });
   });
+  const algum = FILTER_DEFS.some(temFiltro);
   const btn = document.getElementById('limparFiltros');
-  if (btn) btn.hidden = !FILTER_DEFS.some(temFiltro);
+  if (btn) btn.hidden = !algum;
+  const bx = document.getElementById('btnXlsxFiltro');
+  if (bx) bx.hidden = !algum && !document.getElementById('searchInput').value.trim();
   buildHead();
 }
 
@@ -1744,6 +1774,118 @@ function exportJSON() {
   download(`action_log_${slug(predio.nome)}_${stamp()}.json`, JSON.stringify(scoped(), null, 2), 'application/json');
   toast('Backup JSON exportado');
 }
+/* ---------- EXPORTAÇÃO EM EXCEL ----------
+   Colunas iguais às da tela, sem Aging (é calculado e envelheceria no arquivo). */
+const XLSX_COLS = [
+  { h: 'ID',             w: 10, get: r => r.id },
+  { h: 'Prioridade',     w: 12, get: r => r.prioridade },
+  { h: 'Sistema',        w: 12, get: r => r.sistema },
+  { h: 'Data',           w: 11, get: r => r.data,           data: true },
+  { h: 'Atividade',      w: 34, get: r => r.atividade },
+  { h: 'Diagnóstico',    w: 42, get: r => r.diagnostico },
+  { h: 'Ação',           w: 52, get: r => r.acao },
+  { h: 'Local',          w: 20, get: r => r.localizacao },
+  { h: 'Categoria',      w: 13, get: r => r.categoria },
+  { h: 'Responsável',    w: 16, get: r => r.responsavel },
+  { h: 'Previsão',       w: 11, get: r => r.dataProgramada, data: true },
+  { h: 'Conclusão',      w: 11, get: r => r.dataConclusao,  data: true },
+  { h: 'Status',         w: 15, get: r => r.status },
+  { h: 'Registrado por', w: 15, get: r => r.criadoPor },
+];
+
+/* Paleta padrão do Excel — a mesma da planilha antiga */
+const COR_STATUS = {
+  'Aberto':               { fill: 'FFC7CE', txt: '9C0006' },
+  'Em andamento':         { fill: 'FFCC99', txt: '974706' },
+  'Aguardando terceiros': { fill: 'FFEB9C', txt: '9C6500' },
+  'Concluído':            { fill: 'C6EFCE', txt: '006100' },
+  'Cancelado':            { fill: 'D9D9D9', txt: '595959' },
+};
+const COR_PRIORIDADE = {
+  'Crítica': { fill: 'FFC7CE', txt: '9C0006' },
+  'Alta':    { fill: 'FFCC99', txt: '974706' },
+  'Média':   { fill: 'FFEB9C', txt: '9C6500' },
+  'Baixa':   { fill: 'EDEDED', txt: '595959' },
+};
+
+function paraData(iso) {
+  if (!iso) return '';
+  const p = String(iso).split('-');
+  if (p.length !== 3) return iso;
+  return new Date(+p[0], +p[1] - 1, +p[2]);
+}
+
+const BORDA_FINA = {
+  top:    { style: 'thin', color: { argb: 'FFBFBFBF' } },
+  left:   { style: 'thin', color: { argb: 'FFBFBFBF' } },
+  bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+  right:  { style: 'thin', color: { argb: 'FFBFBFBF' } },
+};
+
+async function exportXLSX(apenasFiltrado) {
+  if (typeof ExcelJS === 'undefined') return toast('Biblioteca do Excel não carregou. Recarregue a página.');
+
+  const lista = apenasFiltrado ? filtered() : scoped();
+  if (!lista.length) return toast('Nada para exportar');
+
+  const wb = new ExcelJS.Workbook();
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Pendências', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+
+  ws.columns = XLSX_COLS.map(c => ({ header: c.h, width: c.w }));
+
+  /* Cabeçalho escuro, como na planilha antiga */
+  const cab = ws.getRow(1);
+  cab.height = 26;
+  cab.eachCell(cel => {
+    cel.font      = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    cel.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    cel.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cel.border    = BORDA_FINA;
+  });
+
+  lista.forEach(r => {
+    const linha = ws.addRow(XLSX_COLS.map(c => {
+      const v = c.get(r);
+      return c.data ? paraData(v) : (v ?? '');
+    }));
+
+    linha.eachCell({ includeEmpty: true }, (cel, i) => {
+      const col = XLSX_COLS[i - 1];
+      cel.font      = { name: 'Arial', size: 10 };
+      cel.border    = BORDA_FINA;
+      cel.alignment = {
+        vertical: 'middle',
+        horizontal: ['Atividade','Diagnóstico','Ação'].includes(col.h) ? 'left' : 'center',
+        wrapText: true,
+      };
+      if (col.data) cel.numFmt = 'dd/mm/yyyy';
+
+      const cor = col.h === 'Status'     ? COR_STATUS[r.status]
+                : col.h === 'Prioridade' ? COR_PRIORIDADE[r.prioridade] : null;
+      if (cor) {
+        cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + cor.fill } };
+        cel.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF' + cor.txt } };
+      }
+    });
+  });
+
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: XLSX_COLS.length } };
+
+  const buf  = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `action_log_${slug(predio.nome)}_${stamp()}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  toast(`${lista.length} registro(s) exportado(s)`);
+}
+
 function exportCSV() {
   const cols = ['id','empreendimento','prioridade','sistema','data','atividade','diagnostico','acao',
                 'localizacao','categoria','responsavel','dataProgramada','dataConclusao','status',
@@ -1799,7 +1941,11 @@ async function importJSON(ev) {
 /* =========================================================================
    INICIALIZAÇÃO
    ========================================================================= */
-document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('searchInput').addEventListener('input', () => {
+  const bx = document.getElementById('btnXlsxFiltro');
+  if (bx) bx.hidden = !FILTER_DEFS.some(temFiltro) && !document.getElementById('searchInput').value.trim();
+  render();
+});
 document.getElementById('f_status').addEventListener('change', e => {
   const c = document.getElementById('f_conclusao');
   if (e.target.value === 'Concluído' && !c.value) c.value = todayISO();

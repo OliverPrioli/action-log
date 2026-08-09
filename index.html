@@ -290,6 +290,27 @@
     display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
   }
   .andamentos .mais { font-size: 11px; color: var(--muted); opacity: .8; font-style: italic; }
+
+  /* ---------- Editor de andamentos no modal ---------- */
+  .and-lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;
+               max-height: 220px; overflow: auto; }
+  .and-item { display: flex; gap: 8px; align-items: flex-start;
+              background: var(--panel); border: 1px solid var(--line-soft);
+              border-radius: 8px; padding: 7px 10px; font-size: 12.5px; line-height: 1.45; }
+  .and-item .quando { font-family: 'Geist Mono', monospace; font-size: 11px;
+                      color: var(--accent-hi); white-space: nowrap; padding-top: 1px; }
+  .and-item .oque { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .and-item .quem { font-size: 10.5px; color: var(--muted); white-space: nowrap; padding-top: 2px; }
+  .and-item .ops { display: flex; gap: 2px; flex-shrink: 0; }
+  .and-item .ops button { background: none; border: 0; color: var(--muted); cursor: pointer;
+                          font-size: 13px; padding: 1px 5px; border-radius: 5px; line-height: 1.3; }
+  .and-item .ops button:hover { color: var(--text); background: rgba(255,255,255,.08); }
+  .and-item.editando { border-color: var(--accent); }
+  .and-nova { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; }
+  .and-nova input[type=date] { width: auto; }
+  .and-nova textarea { min-height: 42px; }
+  .and-nova button { align-self: start; white-space: nowrap; padding: 9px 14px; }
+  .and-vazio { font-size: 12px; color: var(--muted); font-style: italic; padding: 2px 0 6px; }
   body.tv .row-actions { display: none; }
   body.tv .c-id    { width: 46px; }
   body.tv .c-prio  { width: 66px; }
@@ -622,9 +643,14 @@
       </div>
 
       <div class="field full" id="fld_acao">
-        <label for="f_acao">Ação <span class="req" id="req_acao" hidden>*</span></label>
-        <textarea id="f_acao" placeholder="O que foi feito ou o que será feito"></textarea>
-        <div class="err">Para concluir, descreva a ação executada.</div>
+        <label>Andamentos <span class="req" id="req_acao" hidden>*</span></label>
+        <div class="and-lista" id="andLista"></div>
+        <div class="and-nova">
+          <input type="date" id="a_data" title="Data do andamento">
+          <textarea id="a_texto" placeholder="O que foi feito ou combinado nesta data — Ctrl+Enter adiciona"></textarea>
+          <button type="button" class="ghost" id="a_btn" onclick="adicionarAndamento()">Adicionar</button>
+        </div>
+        <div class="err">Para concluir, registre ao menos um andamento.</div>
       </div>
 
       <div class="field" id="fld_data">
@@ -758,6 +784,7 @@ let RESPONSAVEIS = [];   // [{ id, nome, predio_id }]
 let usuarioNome  = '';
 let PERFIS       = {};   // user_id -> nome
 let canalAcoes   = null; // assinatura em tempo real
+let ANDAMENTOS   = {};   // acao_id -> [{ id, data, texto, autor_id, criado_em }]
 
 /* =========================================================================
    ESTADO
@@ -776,7 +803,8 @@ function daLinha(row) {
     sistema:        row.sistema,
     atividade:      row.atividade,
     diagnostico:    row.diagnostico || '',
-    acao:           row.acao || '',
+    acaoLegado:     row.acao || '',
+    acao:           montaTextoAcao(row.id, row.acao || ''),
     data:           row.data_atividade,
     responsavel:    row.responsavel || '',
     responsavel_id: row.responsavel_id,
@@ -791,6 +819,28 @@ function daLinha(row) {
     criadoEm:       row.criado_em,
     alteradoEm:     row.alterado_em,
   };
+}
+
+/* ---------- ANDAMENTOS ----------
+   Cada atualização de uma ação é um registro próprio, com data e autor.
+   O texto antigo em acoes.acao fica como legado até a limpeza final. */
+function montaTextoAcao(acaoId, legado) {
+  const lst = ANDAMENTOS[acaoId];
+  if (!lst || !lst.length) return legado || '';
+  return lst.map(a => fmtBR(a.data) + ' - ' + a.texto).join('\n');
+}
+function sincronizarTextos() {
+  records.forEach(r => { r.acao = montaTextoAcao(r.uuid, r.acaoLegado); });
+}
+function ordenaAndamentos(lst) {
+  lst.sort((a, b) => (String(a.data) + (a.criado_em || '')).localeCompare(String(b.data) + (b.criado_em || '')));
+}
+async function carregarAndamentos() {
+  const { data, error } = await db.from('andamentos').select('*')
+    .order('data').order('criado_em');
+  if (error) { toast('Erro ao carregar andamentos: ' + error.message); return; }
+  ANDAMENTOS = {};
+  (data || []).forEach(a => (ANDAMENTOS[a.acao_id] = ANDAMENTOS[a.acao_id] || []).push(a));
 }
 
 async function carregarRecords() {
@@ -839,6 +889,7 @@ function ligarTempoReal() {
 
   canalAcoes = db.channel('acoes-ao-vivo')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'acoes' }, aplicarMudanca)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'andamentos' }, aplicarMudancaAndamento)
     .subscribe(status => {
       marcarLive(status === 'SUBSCRIBED' ? 'on' : 'off');
     });
@@ -872,6 +923,24 @@ function aplicarMudanca(msg) {
   render();
 }
 
+/* Andamentos entram e saem em silêncio: a linha da ação já avisa o essencial */
+function aplicarMudancaAndamento(msg) {
+  const { eventType, new: novo, old: velho } = msg;
+  if (eventType === 'DELETE') {
+    for (const k of Object.keys(ANDAMENTOS)) {
+      const i = ANDAMENTOS[k].findIndex(a => a.id === velho.id);
+      if (i >= 0) { ANDAMENTOS[k].splice(i, 1); break; }
+    }
+  } else {
+    const lst = ANDAMENTOS[novo.acao_id] = ANDAMENTOS[novo.acao_id] || [];
+    const i = lst.findIndex(a => a.id === novo.id);
+    if (i >= 0) lst[i] = novo; else lst.push(novo);
+    ordenaAndamentos(lst);
+  }
+  sincronizarTextos();
+  render();
+}
+
 /* uuid da última ação que EU gravei — evita avisar sobre a própria edição */
 let ultimaGravacao = null;
 
@@ -880,6 +949,7 @@ async function recarregar() {
   const b = document.getElementById('btnReload');
   b.disabled = true; b.textContent = 'Atualizando…';
   await carregarResponsaveis();
+  await carregarAndamentos();
   await carregarRecords();
   buildFilters();
   render();
@@ -956,11 +1026,28 @@ function parseAndamentos(txt) {
   return itens;
 }
 
-function renderAcao(txt) {
+/* "07/05/25" ou "18/02/2026" → ISO; null se não reconhecer */
+function dataDeAndamento(str) {
+  const m = String(str || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  const y = m[3].length === 2 ? '20' + m[3] : m[3];
+  const iso = `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return isNaN(new Date(iso + 'T00:00:00')) ? null : iso;
+}
+
+/* Itens estruturados da tabela andamentos; texto legado só como reserva */
+function itensAndamento(r) {
+  const lst = ANDAMENTOS[r.uuid];
+  if (lst && lst.length) return lst.map(a => ({ quando: fmtBR(a.data), oque: a.texto }));
+  return parseAndamentos(r.acaoLegado);
+}
+
+function renderAcao(r) {
+  const txt = r.acao;
   /* Fora da apresentação, a coluna volta a ser compacta como antes */
   if (!modoTv) return `<div class="cell-clip" title="${esc(txt || '')}">${esc(txt || '—')}</div>`;
 
-  const itens = parseAndamentos(txt);
+  const itens = itensAndamento(r);
   if (!itens.length) return '<div class="cell-clip">—</div>';
 
   /* Só os últimos andamentos — o resto vira contagem */
@@ -1068,6 +1155,7 @@ async function iniciarSessao() {
   PREDIOS = preds || [];
 
   await carregarResponsaveis();
+  await carregarAndamentos();
   await carregarRecords();
 
   document.getElementById('login').hidden = true;
@@ -1502,7 +1590,7 @@ function render() {
       <td class="nowrap mono c-data">${modoTv ? fmtCurto(r.data) : fmtBR(r.data)}</td>
       <td class="c-desc"><div class="cell-clip" title="${esc(r.atividade)}">${esc(r.atividade || '—')}</div></td>
       <td class="c-diag"><div class="cell-clip" title="${esc(r.diagnostico)}">${esc(r.diagnostico || '—')}</div></td>
-      <td class="c-acao">${renderAcao(r.acao)}</td>
+      <td class="c-acao">${renderAcao(r)}</td>
       <td class="nowrap col-off">${esc(r.localizacao || '—')}</td>
       <td class="nowrap col-off">${esc(r.categoria || '—')}</td>
       <td class="nowrap c-resp">${esc(r.responsavel || '—')}</td>
@@ -1530,7 +1618,7 @@ function render() {
   document.getElementById('emptyState').hidden = has;
   document.getElementById('mainTable').hidden = !has;
   document.getElementById('resultCount').textContent =
-    has ? `${list.length} de ${scoped().length} registro(s) · ${predio}` : '';
+    has ? `${list.length} de ${scoped().length} registro(s) · ${predio.nome}` : '';
 
   updateLeds();
 }
@@ -1606,7 +1694,6 @@ const PRIOS_COM_PREVISAO = ['Crítica', 'Alta', 'Média'];
 /* Obrigatórios para dar a atividade como concluída */
 const REQ_CONCLUSAO = [
   { fld: 'fld_diagnostico', input: 'f_diagnostico' },
-  { fld: 'fld_acao',        input: 'f_acao' },
   { fld: 'fld_conclusao',   input: 'f_conclusao' },
 ];
 const TODOS_CAMPOS = [...REQ_BASE, REQ_PREVISAO, ...REQ_CONCLUSAO];
@@ -1632,6 +1719,7 @@ function updateReqMarks() {
 }
 function clearInvalid() {
   TODOS_CAMPOS.forEach(r => document.getElementById(r.fld).classList.remove('invalid'));
+  document.getElementById('fld_acao').classList.remove('invalid');
 }
 
 function openModal(id, finalizar) {
@@ -1648,7 +1736,6 @@ function openModal(id, finalizar) {
   document.getElementById('f_sistema').value      = r?.sistema || '';
   document.getElementById('f_atividade').value    = r?.atividade || '';
   document.getElementById('f_diagnostico').value  = r?.diagnostico || '';
-  document.getElementById('f_acao').value         = r?.acao || '';
   document.getElementById('f_data').value         = r?.data || todayISO();
   document.getElementById('f_responsavel').value  = r?.responsavel_id || '';
   document.getElementById('f_prioridade').value   = r?.prioridade || 'Baixa';
@@ -1658,6 +1745,20 @@ function openModal(id, finalizar) {
   document.getElementById('f_conclusao').value    = r?.dataConclusao || (finalizar ? todayISO() : '');
   document.getElementById('f_localizacao').value  = r?.localizacao || '';
   document.getElementById('f_proposta').value     = r?.propostaNumero || '';
+
+  /* Andamentos: trabalha numa cópia local; só grava no Salvar */
+  andRemover = []; andEditIdx = null;
+  document.getElementById('a_data').value  = todayISO();
+  document.getElementById('a_texto').value = '';
+  document.getElementById('a_btn').textContent = 'Adicionar';
+  modalAnd = (r && ANDAMENTOS[r.uuid] ? ANDAMENTOS[r.uuid] : []).map(a => ({ ...a }));
+  /* Texto antigo ainda sem conversão vira andamentos na primeira gravação */
+  if (r && !modalAnd.length && r.acaoLegado) {
+    modalAnd = parseAndamentos(r.acaoLegado).map(it => ({
+      id: null, data: dataDeAndamento(it.quando) || r.data, texto: it.oque, autor_id: null,
+    }));
+  }
+  renderAndamentosModal();
 
   const audit = document.getElementById('auditLine');
   if (r) {
@@ -1671,7 +1772,79 @@ function openModal(id, finalizar) {
 
   updateReqMarks();
   document.getElementById('overlay').classList.add('open');
-  document.getElementById(finalizar ? 'f_acao' : 'f_atividade').focus();
+  document.getElementById(finalizar ? 'a_texto' : 'f_atividade').focus();
+}
+
+/* ---------- EDITOR DE ANDAMENTOS DO MODAL ----------
+   Tudo fica em memória (modalAnd / andRemover) e só vai ao banco no Salvar,
+   para que o Cancelar continue cancelando de verdade. */
+let modalAnd   = [];   // cópia local: itens existentes + novos
+let andRemover = [];   // ids existentes marcados para exclusão
+let andEditIdx = null; // índice em edição, se houver
+
+function renderAndamentosModal() {
+  const box = document.getElementById('andLista');
+  if (!modalAnd.length) {
+    box.innerHTML = '<div class="and-vazio">Nenhum andamento ainda — registre o primeiro abaixo.</div>';
+    return;
+  }
+  box.innerHTML = modalAnd.map((a, i) => `
+    <div class="and-item ${andEditIdx === i ? 'editando' : ''}">
+      <span class="quando">${fmtBR(a.data)}</span>
+      <span class="oque">${esc(a.texto)}</span>
+      ${a.autor_id && PERFIS[a.autor_id] ? `<span class="quem">${esc(PERFIS[a.autor_id])}</span>` : ''}
+      <span class="ops">
+        <button type="button" title="Editar" onclick="editarAndamento(${i})">✎</button>
+        <button type="button" title="Remover" onclick="removerAndamento(${i})">✕</button>
+      </span>
+    </div>`).join('');
+}
+
+function adicionarAndamento() {
+  const dEl = document.getElementById('a_data');
+  const tEl = document.getElementById('a_texto');
+  const data  = dEl.value || todayISO();
+  const texto = tEl.value.trim();
+  if (!texto) { tEl.focus(); return; }
+
+  if (andEditIdx !== null) {
+    const a = modalAnd[andEditIdx];
+    a.data = data; a.texto = texto;
+    if (a.id) a._dirty = true;
+    andEditIdx = null;
+    document.getElementById('a_btn').textContent = 'Adicionar';
+  } else {
+    modalAnd.push({ id: null, data, texto, autor_id: null });
+  }
+  modalAnd.sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  dEl.value = todayISO(); tEl.value = '';
+  document.getElementById('fld_acao').classList.remove('invalid');
+  renderAndamentosModal();
+  tEl.focus();
+}
+
+function editarAndamento(i) {
+  const a = modalAnd[i];
+  andEditIdx = i;
+  document.getElementById('a_data').value  = a.data;
+  document.getElementById('a_texto').value = a.texto;
+  document.getElementById('a_btn').textContent = 'Atualizar';
+  renderAndamentosModal();
+  document.getElementById('a_texto').focus();
+}
+
+function removerAndamento(i) {
+  const a = modalAnd[i];
+  if (a.id) andRemover.push(a.id);
+  modalAnd.splice(i, 1);
+  if (andEditIdx === i) {
+    andEditIdx = null;
+    document.getElementById('a_texto').value = '';
+    document.getElementById('a_btn').textContent = 'Adicionar';
+  } else if (andEditIdx !== null && andEditIdx > i) {
+    andEditIdx--;
+  }
+  renderAndamentosModal();
 }
 
 /* Atalho da tabela: abre o registro já em modo de conclusão */
@@ -1689,6 +1862,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 
 async function saveRecord() {
   clearInvalid();
+  /* Texto digitado e não adicionado conta: vira andamento automaticamente */
+  if (document.getElementById('a_texto').value.trim()) adicionarAndamento();
+
   let firstBad = null;
   requiredNow().forEach(req => {
     const el = document.getElementById(req.input);
@@ -1697,6 +1873,10 @@ async function saveRecord() {
       if (!firstBad) firstBad = el;
     }
   });
+  if (exigeConclusao() && !modalAnd.length) {
+    document.getElementById('fld_acao').classList.add('invalid');
+    if (!firstBad) firstBad = document.getElementById('a_texto');
+  }
   if (firstBad) {
     firstBad.focus();
     toast('Preencha os campos obrigatórios');
@@ -1711,7 +1891,6 @@ async function saveRecord() {
     sistema:         document.getElementById('f_sistema').value,
     atividade:       document.getElementById('f_atividade').value.trim(),
     diagnostico:     document.getElementById('f_diagnostico').value.trim() || null,
-    acao:            document.getElementById('f_acao').value.trim() || null,
     data_atividade:  document.getElementById('f_data').value,
     responsavel_id:  respId || null,
     responsavel:     respNome,
@@ -1744,7 +1923,32 @@ async function saveRecord() {
   const i = records.findIndex(r => r.uuid === novo.uuid);
   if (i >= 0) records[i] = novo; else records.push(novo);
 
-  toast('Ação ' + novo.id + (editingId ? ' atualizada' : ' registrada'));
+  /* Grava os andamentos: exclusões, edições e novos, nesta ordem */
+  const errosAnd = [];
+  if (andRemover.length) {
+    const { error } = await db.from('andamentos').delete().in('id', andRemover);
+    if (error) errosAnd.push(error.message);
+  }
+  for (const a of modalAnd) {
+    if (a.id && a._dirty) {
+      const { error } = await db.from('andamentos')
+        .update({ data: a.data, texto: a.texto }).eq('id', a.id);
+      if (error) errosAnd.push(error.message);
+    }
+  }
+  const novosAnd = modalAnd.filter(a => !a.id)
+    .map(a => ({ acao_id: novo.uuid, data: a.data, texto: a.texto }));
+  if (novosAnd.length) {
+    const { error } = await db.from('andamentos').insert(novosAnd);
+    if (error) errosAnd.push(error.message);
+  }
+  const { data: lst } = await db.from('andamentos').select('*')
+    .eq('acao_id', novo.uuid).order('data').order('criado_em');
+  ANDAMENTOS[novo.uuid] = lst || [];
+  sincronizarTextos();
+  toast(errosAnd.length
+    ? 'Atenção — parte dos andamentos não gravou: ' + errosAnd[0]
+    : 'Ação ' + novo.id + (editingId ? ' atualizada' : ' registrada'));
   closeModal();
   buildFilters();
   render();
@@ -1760,6 +1964,7 @@ async function deleteRecord() {
   const { error } = await db.from('acoes').delete().eq('id', editingId);
   if (error) { toast('Não excluiu: ' + error.message); return; }
 
+  delete ANDAMENTOS[editingId];   // o banco apaga em cascata; aqui é só o espelho local
   records = records.filter(r => r.uuid !== editingId);
   toast('Ação ' + alvo.id + ' excluída');
   closeModal();
@@ -1784,7 +1989,11 @@ function slug(s) {
 function stamp() { return todayISO().replace(/-/g, ''); }
 
 function exportJSON() {
-  download(`action_log_${slug(predio.nome)}_${stamp()}.json`, JSON.stringify(scoped(), null, 2), 'application/json');
+  const dados = scoped().map(r => ({
+    ...r,
+    andamentos: (ANDAMENTOS[r.uuid] || []).map(a => ({ data: a.data, texto: a.texto })),
+  }));
+  download(`action_log_${slug(predio.nome)}_${stamp()}.json`, JSON.stringify(dados, null, 2), 'application/json');
   toast('Backup JSON exportado');
 }
 /* ---------- EXPORTAÇÃO EM EXCEL ----------
@@ -2199,17 +2408,40 @@ async function confirmarImport() {
     (data || []).forEach(r => RESPONSAVEIS.push(r));
   }
 
-  const linhas = pendenteImport.map(l => ({
-    ...l,
-    responsavel_id: RESPONSAVEIS.find(r => r.nome === l.responsavel &&
-                     (!r.predio_id || r.predio_id === predio.id))?.id || null,
-  }));
+  const fonte = pendenteImport;
+  const linhas = fonte.map(l => {
+    const { acao, ...resto } = l;   // o texto da coluna Ação vira andamentos, não coluna
+    return {
+      ...resto,
+      responsavel_id: RESPONSAVEIS.find(r => r.nome === l.responsavel &&
+                       (!r.predio_id || r.predio_id === predio.id))?.id || null,
+    };
+  });
 
   const { data, error } = await db.from('acoes').insert(linhas).select('*');
   btn.disabled = false; btn.textContent = 'Importar';
 
   if (error) return abrirImport('Não deu certo',
     `<p>O banco recusou a importação:</p><p style="color:var(--red)">${esc(error.message)}</p>`, false);
+
+  /* A coluna Ação da planilha vira andamentos datados (mesmo parser da tela) */
+  const novosAnd = [];
+  (data || []).forEach((row, i) => {
+    const txt = fonte[i]?.acao;
+    if (!txt) return;
+    parseAndamentos(txt).forEach(it => {
+      novosAnd.push({
+        acao_id: row.id,
+        data: dataDeAndamento(it.quando) || row.data_atividade,
+        texto: it.oque,
+      });
+    });
+  });
+  if (novosAnd.length) {
+    const { error: eAnd } = await db.from('andamentos').insert(novosAnd);
+    if (eAnd) toast('Ações importadas, mas os andamentos falharam: ' + eAnd.message);
+  }
+  await carregarAndamentos();
 
   (data || []).forEach(row => records.push(daLinha(row)));
   fecharImport();
@@ -2234,7 +2466,6 @@ async function importJSONArquivo(file) {
     sistema:         r.sistema || 'Outros',
     atividade:       r.atividade || '(sem descrição)',
     diagnostico:     r.diagnostico || null,
-    acao:            r.acao || null,
     data_atividade:  r.data || todayISO(),
     responsavel:     r.responsavel || '',
     prioridade:      r.prioridade || 'Baixa',
@@ -2248,6 +2479,26 @@ async function importJSONArquivo(file) {
 
   const { data: inseridos, error } = await db.from('acoes').insert(linhas).select('*');
   if (error) return toast('Não importou: ' + error.message);
+
+  /* Restaura os andamentos: estruturados se o backup tiver, senão do texto */
+  const novosAnd = [];
+  inseridos.forEach((row, i) => {
+    const r = data[i] || {};
+    if (Array.isArray(r.andamentos) && r.andamentos.length) {
+      r.andamentos.forEach(a => novosAnd.push({
+        acao_id: row.id, data: a.data || row.data_atividade, texto: a.texto || '',
+      }));
+    } else if (r.acao) {
+      parseAndamentos(r.acao).forEach(it => novosAnd.push({
+        acao_id: row.id, data: dataDeAndamento(it.quando) || row.data_atividade, texto: it.oque,
+      }));
+    }
+  });
+  if (novosAnd.length) {
+    const { error: eAnd } = await db.from('andamentos').insert(novosAnd.filter(a => a.texto));
+    if (eAnd) toast('Registros importados, mas os andamentos falharam: ' + eAnd.message);
+  }
+  await carregarAndamentos();
 
   inseridos.forEach(row => records.push(daLinha(row)));
   buildFilters();
@@ -2275,6 +2526,12 @@ TODOS_CAMPOS.forEach(req => {
   });
 });
 
+document.getElementById('a_texto').addEventListener('input', () => {
+  document.getElementById('fld_acao').classList.remove('invalid');
+});
+document.getElementById('a_texto').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); adicionarAndamento(); }
+});
 document.getElementById('f_responsavel').addEventListener('change', e => {
   if (e.target.value === '__novo') novoResponsavel();
 });

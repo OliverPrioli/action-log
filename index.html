@@ -191,6 +191,12 @@
 
   .toolbar { align-items: center; }
   .icon-btn { padding: 8px 9px !important; display: inline-flex; align-items: center; }
+  .icon-btn.girando svg { animation: gira .8s linear infinite; }
+  .icon-btn.girando { opacity: .7; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .icon-btn.girando svg { animation: none; }
+  }
   .menu-arq { position: relative; display: inline-flex; }
   #limparFiltros { font-size: 12px; color: var(--muted); background: none; border: none;
                    cursor: pointer; padding: 6px 4px; white-space: nowrap; }
@@ -390,6 +396,28 @@
   .field .err { display: none; color: var(--red); font-size: 11.5px; margin-top: 4px; }
   .field.invalid .err { display: block; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  /* ---------- Responsáveis ---------- */
+  .resp-lista { max-height: 40vh; overflow: auto; display: flex; flex-direction: column; gap: 5px; }
+  .resp-item { display: flex; gap: 9px; align-items: center; padding: 7px 10px;
+               border: 1px solid var(--line-soft); border-radius: 8px;
+               background: var(--panel); font-size: 12.5px; }
+  .resp-item.editando { border-color: var(--accent); }
+  .resp-item.inativo .nome { color: var(--muted); text-decoration: line-through; }
+  .resp-item .nome { flex: 1; min-width: 0; }
+  .resp-item .marca { font-family: 'Geist Mono', monospace; font-size: 10px;
+                      text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+                      border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  .resp-item .marca.global { color: var(--teal); border-color: var(--teal); }
+  .resp-item .conta { font-family: 'Geist Mono', monospace; font-size: 10.5px; color: var(--muted); }
+  .resp-item button { background: none; border: 0; color: var(--muted); cursor: pointer;
+                      font-size: 13px; padding: 1px 5px; border-radius: 5px; }
+  .resp-item button:hover { color: var(--text); background: rgba(255,255,255,.08); }
+  .resp-item button:disabled { opacity: .3; cursor: not-allowed; }
+  .linha-check { display: flex; align-items: center; gap: 8px; text-transform: none;
+                 letter-spacing: 0; font-family: inherit; font-size: 13px; color: var(--text); }
+  .linha-check input { width: auto; }
+  .dica-inline { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
   /* ---------- Histórico ---------- */
   .hist-corpo { margin-top: 12px; max-height: 54vh; overflow: auto;
                 display: flex; flex-direction: column; gap: 5px; }
@@ -542,6 +570,7 @@
             <div class="menu-drop" id="menuUser" hidden>
               <button id="miTrocar" onclick="fecharMenuUser(); trocarPredio()">Trocar empreendimento</button>
               <button onclick="fecharMenuUser(); abrirPredio()">Dados do empreendimento</button>
+              <button onclick="fecharMenuUser(); abrirResponsaveis()">Responsáveis</button>
               <button id="miHistorico" hidden onclick="fecharMenuUser(); abrirHistorico()">Histórico de alterações</button>
               <button onclick="fecharMenuUser(); abrirTrocaSenha()">Trocar senha</button>
               <button onclick="fecharMenuUser(); sair()">Sair</button>
@@ -871,6 +900,50 @@
   </div>
 </div>
 
+<!-- ===================== MODAL — RESPONSÁVEIS ===================== -->
+<div class="overlay" id="overlayResp">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="respTitle">
+    <h2 id="respTitle">Responsáveis</h2>
+    <p class="req-note">Globais valem para os dois empreendimentos. Quem sai de cena é desativado, não apagado — as ações antigas continuam mostrando quem atendeu.</p>
+
+    <div id="r_lista" class="resp-lista"></div>
+
+    <div class="grid" id="r_form" style="margin-top:14px">
+      <div class="field full">
+        <label for="r_nome" id="r_formTitulo">Novo responsável</label>
+        <input type="text" id="r_nome" placeholder="Nome como deve aparecer nos relatórios">
+      </div>
+      <div class="field">
+        <label for="r_tipo">Tipo</label>
+        <select id="r_tipo">
+          <option value="interno">Interno</option>
+          <option value="externo">Externo</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="r_ativo">Situação</label>
+        <select id="r_ativo">
+          <option value="sim">Ativo</option>
+          <option value="nao">Desativado</option>
+        </select>
+      </div>
+      <div class="field full" id="r_propagaBox" hidden>
+        <label class="linha-check">
+          <input type="checkbox" id="r_propaga">
+          <span id="r_propagaTexto"></span>
+        </label>
+        <div class="dica-inline">Marque só se for correção do mesmo nome. Se for outra pessoa, desative esta e cadastre a nova.</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost" onclick="fecharResponsaveis()">Fechar</button>
+      <button class="ghost" id="r_novo" onclick="novoFormResponsavel()" hidden>Cadastrar outro</button>
+      <button class="primary" id="r_btn" onclick="salvarResponsavel()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MODAL — HISTÓRICO ===================== -->
 <div class="overlay" id="overlayHistorico">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
@@ -1084,19 +1157,20 @@ let ultimaGravacao = null;
 /* Puxa de novo o que os colegas registraram */
 async function recarregar() {
   const b = document.getElementById('btnReload');
-  b.disabled = true; b.textContent = 'Atualizando…';
+  /* Nada de mexer no texto: o botão é só o ícone, e textContent apagaria o SVG */
+  b.disabled = true; b.classList.add('girando'); b.title = 'Atualizando…';
   await carregarResponsaveis();
   await carregarAndamentos();
   await carregarRecords();
   buildFilters();
   render();
-  b.disabled = false; b.textContent = 'Atualizar';
+  b.disabled = false; b.classList.remove('girando'); b.title = 'Atualizar';
   toast('Lista atualizada');
 }
 
 async function carregarResponsaveis() {
   const { data, error } = await db.from('responsaveis')
-    .select('id, nome, predio_id').eq('ativo', true).order('nome');
+    .select('id, nome, predio_id, tipo, ativo').order('nome');
   if (!error) RESPONSAVEIS = data || [];
 }
 
@@ -1592,6 +1666,157 @@ function fecharHistorico() {
   document.getElementById('overlayHistorico').classList.remove('open');
 }
 
+/* =========================================================================
+   RESPONSÁVEIS — cadastro e correção
+   Regra combinada: responsável deste empreendimento qualquer um edita;
+   global, só supervisor. O banco aplica a mesma regra por RLS.
+   ========================================================================= */
+let respEditId = null;
+
+function podeEditarResp(r) {
+  return r.predio_id ? true : souSupervisor;
+}
+
+/* Quantas ações estão penduradas neste responsável */
+function acoesDoResponsavel(id) {
+  return records.filter(r => r.responsavel_id === id).length;
+}
+
+function respVisiveis() {
+  return RESPONSAVEIS
+    .filter(r => !r.predio_id || r.predio_id === predio?.id)
+    .sort((a, b) => (a.ativo === false) - (b.ativo === false) ||
+                    a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+function renderResponsaveis() {
+  const box = document.getElementById('r_lista');
+  const lista = respVisiveis();
+
+  if (!lista.length) {
+    box.innerHTML = '<div class="hist-vazio">Nenhum responsável cadastrado ainda.</div>';
+    return;
+  }
+
+  box.innerHTML = lista.map(r => {
+    const n = acoesDoResponsavel(r.id);
+    const pode = podeEditarResp(r);
+    return `<div class="resp-item ${respEditId === r.id ? 'editando' : ''} ${r.ativo === false ? 'inativo' : ''}">
+      <span class="nome">${esc(r.nome)}</span>
+      <span class="marca ${r.predio_id ? '' : 'global'}">${r.predio_id ? 'do prédio' : 'global'}</span>
+      <span class="conta">${n ? n + (n === 1 ? ' ação' : ' ações') : '—'}</span>
+      <button type="button" title="${pode ? 'Editar' : 'Só supervisor edita responsável global'}"
+              onclick="editarResponsavel('${esc(r.id)}')" ${pode ? '' : 'disabled'}>✎</button>
+    </div>`;
+  }).join('');
+}
+
+function novoFormResponsavel() {
+  respEditId = null;
+  document.getElementById('r_formTitulo').textContent = 'Novo responsável';
+  document.getElementById('r_nome').value = '';
+  document.getElementById('r_tipo').value = 'externo';
+  document.getElementById('r_ativo').value = 'sim';
+  document.getElementById('r_ativo').disabled = true;   // nasce ativo
+  document.getElementById('r_propagaBox').hidden = true;
+  document.getElementById('r_propaga').checked = false;
+  document.getElementById('r_novo').hidden = true;
+  renderResponsaveis();
+  document.getElementById('r_nome').focus();
+}
+
+function editarResponsavel(id) {
+  const r = RESPONSAVEIS.find(x => x.id === id);
+  if (!r || !podeEditarResp(r)) return;
+
+  respEditId = id;
+  document.getElementById('r_formTitulo').textContent =
+    (r.predio_id ? 'Editando' : 'Editando responsável global');
+  document.getElementById('r_nome').value  = r.nome;
+  document.getElementById('r_tipo').value  = r.tipo || 'externo';
+  document.getElementById('r_ativo').value = r.ativo === false ? 'nao' : 'sim';
+  document.getElementById('r_ativo').disabled = false;
+  document.getElementById('r_propaga').checked = false;
+  document.getElementById('r_novo').hidden = false;
+  avaliarPropagacao();
+  renderResponsaveis();
+  document.getElementById('r_nome').focus();
+}
+
+/* A opção de corrigir os registros antigos só aparece quando o nome muda
+   e existem ações gravadas com o nome anterior */
+function avaliarPropagacao() {
+  const box = document.getElementById('r_propagaBox');
+  const r = RESPONSAVEIS.find(x => x.id === respEditId);
+  if (!r) { box.hidden = true; return; }
+
+  const novo = document.getElementById('r_nome').value.trim();
+  const n = acoesDoResponsavel(r.id);
+  const mostrar = novo && novo !== r.nome && n > 0;
+
+  box.hidden = !mostrar;
+  if (mostrar) {
+    document.getElementById('r_propagaTexto').textContent =
+      `Corrigir o nome também ${n === 1 ? 'no registro já gravado' : `nos ${n} registros já gravados`}`;
+  }
+}
+
+async function abrirResponsaveis() {
+  if (!predio) return;
+  await carregarResponsaveis();
+  novoFormResponsavel();
+  document.getElementById('overlayResp').classList.add('open');
+}
+
+function fecharResponsaveis() {
+  document.getElementById('overlayResp').classList.remove('open');
+  respEditId = null;
+}
+
+async function salvarResponsavel() {
+  const nome = document.getElementById('r_nome').value.trim();
+  if (!nome) { document.getElementById('r_nome').focus(); return toast('Informe o nome'); }
+
+  const tipo  = document.getElementById('r_tipo').value;
+  const ativo = document.getElementById('r_ativo').value === 'sim';
+  const btn   = document.getElementById('r_btn');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  let erro = null, msg = '';
+
+  if (respEditId) {
+    const antigo = RESPONSAVEIS.find(r => r.id === respEditId);
+    const propagar = document.getElementById('r_propaga').checked &&
+                     !document.getElementById('r_propagaBox').hidden;
+
+    const { error } = await db.from('responsaveis')
+      .update({ nome, tipo, ativo }).eq('id', respEditId);
+    erro = error;
+
+    if (!erro && propagar && antigo.nome !== nome) {
+      const { error: e2 } = await db.from('acoes')
+        .update({ responsavel: nome }).eq('responsavel_id', respEditId);
+      if (e2) erro = e2; else await carregarRecords();
+    }
+    msg = propagar ? `${nome} atualizado, registros antigos corrigidos` : `${nome} atualizado`;
+  } else {
+    const { error } = await db.from('responsaveis')
+      .insert({ nome, tipo, ativo: true, predio_id: predio.id });
+    erro = error;
+    msg = `${nome} cadastrado`;
+  }
+
+  btn.disabled = false; btn.textContent = 'Salvar';
+  if (erro) return toast('Não salvou: ' + erro.message);
+
+  await carregarResponsaveis();
+  refreshResponsaveis();
+  novoFormResponsavel();
+  buildFilters();
+  render();
+  toast(msg);
+}
+
 function abrirTrocaSenha() {
   ['t_atual','t_nova','t_conf'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('t_err').textContent = '';
@@ -2068,18 +2293,30 @@ function updateLeds() {
 /* =========================================================================
    MODAL / CRUD
    ========================================================================= */
-/* Responsáveis visíveis: os globais + os deste empreendimento */
+/* Responsáveis visíveis na lista de escolha: os globais + os deste
+   empreendimento, e só os ativos. Os desativados continuam no banco,
+   sustentando o nome nas ações antigas. */
 function responsaveisDoPredio() {
   return RESPONSAVEIS
-    .filter(r => !r.predio_id || r.predio_id === predio?.id)
+    .filter(r => (!r.predio_id || r.predio_id === predio?.id) && r.ativo !== false)
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
-function refreshResponsaveis() {
+/* Recebe o responsável já gravado na ação: se ele foi desativado depois,
+   entra na lista assim mesmo — senão o campo abriria em branco e a edição
+   trocaria o responsável sem ninguém pedir. */
+function refreshResponsaveis(idAtual) {
   const sel = document.getElementById('f_responsavel');
-  const atual = sel.value;
+  const atual = idAtual || sel.value;
+  const lista = responsaveisDoPredio();
+
+  if (atual && !lista.some(r => r.id === atual)) {
+    const fora = RESPONSAVEIS.find(r => r.id === atual);
+    if (fora) lista.push({ ...fora, nome: fora.nome + ' (desativado)' });
+  }
+
   sel.innerHTML = '<option value="">— selecione —</option>' +
-    responsaveisDoPredio().map(r => `<option value="${esc(r.id)}">${esc(r.nome)}</option>`).join('') +
+    lista.map(r => `<option value="${esc(r.id)}">${esc(r.nome)}</option>`).join('') +
     '<option value="__novo">+ Cadastrar responsável…</option>';
   sel.value = atual;
 }
@@ -2146,9 +2383,10 @@ function clearInvalid() {
 function openModal(id, finalizar) {
   editingId = id || null;
   clearInvalid();
-  refreshResponsaveis();
 
   const r = id ? records.find(x => x.uuid === id) : null;
+  refreshResponsaveis(r?.responsavel_id || '');
+
   document.getElementById('modalTitle').textContent =
     finalizar ? 'Finalizar atividade · ' + r.id : (r ? 'Editar ação · ' + r.id : 'Nova ação');
   document.getElementById('btnDelete').hidden = !id;
@@ -2952,6 +3190,15 @@ TODOS_CAMPOS.forEach(req => {
 document.getElementById('f_data').addEventListener('change', e => {
   document.getElementById('f_os').value = osDaData(e.target.value);
 });
+
+document.getElementById('r_nome').addEventListener('input', avaliarPropagacao);
+document.getElementById('r_nome').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); salvarResponsavel(); }
+});
+document.getElementById('overlayResp').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharResponsaveis();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharResponsaveis(); });
 
 document.getElementById('h_busca').addEventListener('input', renderHistorico);
 document.getElementById('overlayHistorico').addEventListener('click', e => {

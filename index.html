@@ -390,6 +390,23 @@
   .field .err { display: none; color: var(--red); font-size: 11.5px; margin-top: 4px; }
   .field.invalid .err { display: block; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  /* ---------- Histórico ---------- */
+  .hist-corpo { margin-top: 12px; max-height: 54vh; overflow: auto;
+                display: flex; flex-direction: column; gap: 5px; }
+  .hist-item { display: grid; grid-template-columns: 128px 1fr; gap: 10px;
+               padding: 7px 10px; border: 1px solid var(--line-soft);
+               border-radius: 8px; background: var(--panel); font-size: 12.5px; line-height: 1.45; }
+  .hist-item .quando { font-family: 'Geist Mono', monospace; font-size: 10.5px;
+                       color: var(--muted); white-space: nowrap; padding-top: 2px; }
+  .hist-item .alvo { font-family: 'Geist Mono', monospace; font-size: 11px;
+                     color: var(--accent-hi); margin-right: 6px; }
+  .hist-item .campo { color: var(--muted); }
+  .hist-item .de { color: var(--muted); text-decoration: line-through; }
+  .hist-item .quem { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .hist-item.novo  { border-left: 2px solid var(--accent); }
+  .hist-item.saiu  { border-left: 2px solid var(--red); }
+  .hist-vazio { font-size: 12.5px; color: var(--muted); font-style: italic; padding: 14px 2px; }
+
   .cep-status { text-transform: none; letter-spacing: 0; margin-left: 6px; font-style: italic; }
   .cep-status.erro { color: var(--red); }
   .cep-status.ok   { color: var(--accent-hi); }
@@ -525,6 +542,7 @@
             <div class="menu-drop" id="menuUser" hidden>
               <button id="miTrocar" onclick="fecharMenuUser(); trocarPredio()">Trocar empreendimento</button>
               <button onclick="fecharMenuUser(); abrirPredio()">Dados do empreendimento</button>
+              <button id="miHistorico" hidden onclick="fecharMenuUser(); abrirHistorico()">Histórico de alterações</button>
               <button onclick="fecharMenuUser(); abrirTrocaSenha()">Trocar senha</button>
               <button onclick="fecharMenuUser(); sair()">Sair</button>
             </div>
@@ -849,6 +867,21 @@
     <div class="modal-actions">
       <button class="ghost" onclick="fecharPredio()">Fechar</button>
       <button class="primary" id="p_btn" onclick="salvarPredio()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL — HISTÓRICO ===================== -->
+<div class="overlay" id="overlayHistorico">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <h2 id="histTitle">Histórico de alterações</h2>
+    <p class="req-note">Registro automático do que mudou, por quem e quando. Não pode ser editado nem apagado.</p>
+    <input type="text" id="h_busca" placeholder="Filtrar por código, campo, valor ou pessoa"
+           style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+                  color:var(--text);font-family:inherit;font-size:13.5px;padding:9px 11px;outline:none">
+    <div id="h_corpo" class="hist-corpo"></div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="fecharHistorico()">Fechar</button>
     </div>
   </div>
 </div>
@@ -1443,6 +1476,122 @@ async function salvarPredio() {
   toast('Dados do empreendimento atualizados');
 }
 
+/* =========================================================================
+   HISTÓRICO DE ALTERAÇÕES
+   Gravado por gatilho no banco e só de leitura. A entrada no menu só aparece
+   para supervisor; quem não é nem enxerga as linhas, o RLS barra antes.
+   ========================================================================= */
+let souSupervisor = false;
+let HISTORICO     = [];
+
+/* Descobre o papel no empreendimento aberto e mostra (ou não) o menu */
+async function atualizarPapel() {
+  souSupervisor = false;
+  try {
+    const { data } = await db.rpc('sou_supervisor', { p_predio: predio.id });
+    souSupervisor = data === true;
+  } catch (e) { /* função ausente ou sem permissão: segue como técnico */ }
+  const mi = document.getElementById('miHistorico');
+  if (mi) mi.hidden = !souSupervisor;
+}
+
+const ROTULO_CAMPO = {
+  sistema: 'Sistema', atividade: 'Atividade', diagnostico: 'Diagnóstico',
+  acao: 'Ação (texto antigo)', data_atividade: 'Data da atividade',
+  responsavel: 'Responsável', responsavel_id: 'Responsável', prioridade: 'Prioridade',
+  categoria: 'Categoria', status: 'Status', previsao: 'Previsão',
+  data_conclusao: 'Conclusão', localizacao: 'Localização', proposta_numero: 'Proposta nº',
+  tipo_atendimento: 'Tipo de atendimento', predio_id: 'Empreendimento', codigo: 'Código',
+  data: 'Data', texto: 'Texto', nome: 'Nome', tipo: 'Tipo', ativo: 'Ativo',
+};
+
+/* Deixa o valor cru do banco legível: uuid vira nome, data vira dd/mm/aaaa */
+function valorLegivel(campo, v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (campo === 'responsavel_id') return RESPONSAVEIS.find(r => r.id === v)?.nome || 'outro responsável';
+  if (campo === 'predio_id')      return PREDIOS.find(p => p.id === v)?.nome || 'outro empreendimento';
+  if (campo === 'ativo')          return v === 'true' ? 'sim' : 'não';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return fmtBR(v);
+  return v;
+}
+
+/* Nome do que foi mexido: código da ação, ou nome do responsável */
+function alvoHistorico(h) {
+  if (h.tabela === 'responsaveis') {
+    return RESPONSAVEIS.find(r => r.id === h.registro_id)?.nome || 'responsável';
+  }
+  const r = records.find(x => x.uuid === h.acao_id);
+  return r ? r.id : 'ação removida';
+}
+
+function descreveHistorico(h) {
+  const alvo = `<span class="alvo">${esc(alvoHistorico(h))}</span>`;
+  const und  = h.tabela === 'andamentos' ? ' · andamento' : '';
+
+  if (h.operacao === 'INSERT') return `${alvo}registro criado${und}`;
+  if (h.operacao === 'DELETE') return `${alvo}registro excluído${und}`;
+
+  const rot = ROTULO_CAMPO[h.campo] || h.campo;
+  return `${alvo}<span class="campo">${esc(rot)}${und}:</span> ` +
+         `<span class="de">${esc(valorLegivel(h.campo, h.valor_antigo))}</span> → ` +
+         `${esc(valorLegivel(h.campo, h.valor_novo))}`;
+}
+
+async function abrirHistorico() {
+  if (!predio) return;
+  const corpo = document.getElementById('h_corpo');
+  document.getElementById('h_busca').value = '';
+  corpo.innerHTML = '<div class="hist-vazio">Carregando…</div>';
+  document.getElementById('overlayHistorico').classList.add('open');
+
+  const { data, error } = await db.from('historico')
+    .select('*')
+    .or(`predio_id.eq.${predio.id},predio_id.is.null`)
+    .order('quando', { ascending: false })
+    .limit(300);
+
+  if (error) {
+    corpo.innerHTML = `<div class="hist-vazio">Não deu para ler: ${esc(error.message)}</div>`;
+    return;
+  }
+  HISTORICO = data || [];
+  renderHistorico();
+}
+
+function renderHistorico() {
+  const q = document.getElementById('h_busca').value.trim().toLowerCase();
+  const corpo = document.getElementById('h_corpo');
+
+  const lista = HISTORICO.filter(h => {
+    if (!q) return true;
+    const quem = PERFIS[h.autor_id] || '';
+    return [alvoHistorico(h), ROTULO_CAMPO[h.campo] || h.campo || '',
+            h.valor_antigo || '', h.valor_novo || '', quem]
+      .join(' ').toLowerCase().includes(q);
+  });
+
+  if (!lista.length) {
+    corpo.innerHTML = `<div class="hist-vazio">${
+      HISTORICO.length ? 'Nada encontrado com esse filtro.'
+                       : 'Nenhuma alteração registrada ainda — o histórico vale a partir de agora.'
+    }</div>`;
+    return;
+  }
+
+  corpo.innerHTML = lista.map(h => {
+    const cls = h.operacao === 'INSERT' ? 'novo' : (h.operacao === 'DELETE' ? 'saiu' : '');
+    const quem = PERFIS[h.autor_id] || 'pelo SQL Editor';
+    return `<div class="hist-item ${cls}">
+      <span class="quando">${fmtStamp(h.quando)}</span>
+      <span>${descreveHistorico(h)}<span class="quem">${esc(quem)}</span></span>
+    </div>`;
+  }).join('');
+}
+
+function fecharHistorico() {
+  document.getElementById('overlayHistorico').classList.remove('open');
+}
+
 function abrirTrocaSenha() {
   ['t_atual','t_nova','t_conf'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('t_err').textContent = '';
@@ -1553,6 +1702,7 @@ function entrar(p) {
   document.getElementById('gate').hidden = true;
   document.getElementById('app').hidden = false;
   document.getElementById('predioLabel').textContent = p.nome.toUpperCase();
+  atualizarPapel();
   buildHead();
   buildFilters();
   render();
@@ -2802,6 +2952,12 @@ TODOS_CAMPOS.forEach(req => {
 document.getElementById('f_data').addEventListener('change', e => {
   document.getElementById('f_os').value = osDaData(e.target.value);
 });
+
+document.getElementById('h_busca').addEventListener('input', renderHistorico);
+document.getElementById('overlayHistorico').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharHistorico();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharHistorico(); });
 
 /* CEP: máscara enquanto digita e busca assim que os 8 dígitos entram */
 document.getElementById('p_cep').addEventListener('input', e => {

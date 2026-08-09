@@ -390,6 +390,9 @@
   .field .err { display: none; color: var(--red); font-size: 11.5px; margin-top: 4px; }
   .field.invalid .err { display: block; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .cep-status { text-transform: none; letter-spacing: 0; margin-left: 6px; font-style: italic; }
+  .cep-status.erro { color: var(--red); }
+  .cep-status.ok   { color: var(--accent-hi); }
   .audit-line {
     font-family: 'Geist Mono', monospace; font-size: 10.5px; color: var(--muted);
     margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); line-height: 1.7;
@@ -521,6 +524,7 @@
             </button>
             <div class="menu-drop" id="menuUser" hidden>
               <button id="miTrocar" onclick="fecharMenuUser(); trocarPredio()">Trocar empreendimento</button>
+              <button onclick="fecharMenuUser(); abrirPredio()">Dados do empreendimento</button>
               <button onclick="fecharMenuUser(); abrirTrocaSenha()">Trocar senha</button>
               <button onclick="fecharMenuUser(); sair()">Sair</button>
             </div>
@@ -659,6 +663,11 @@
         <div class="err">Informe a data da atividade.</div>
       </div>
 
+      <div class="field" id="fld_os">
+        <label for="f_os">Ordem de serviço — vem da data</label>
+        <input type="text" id="f_os" disabled>
+      </div>
+
       <div class="field" id="fld_responsavel">
         <label for="f_responsavel">Responsável <span class="req">*</span></label>
         <select id="f_responsavel"></select>
@@ -751,6 +760,99 @@
   </div>
 </div>
 
+<!-- ===================== MODAL — DADOS DO EMPREENDIMENTO ===================== -->
+<div class="overlay" id="overlayPredio">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="predioTitle">
+    <h2 id="predioTitle">Dados do empreendimento</h2>
+    <p class="req-note" id="p_nota">Horário de contrato e dados que entram no cabeçalho dos relatórios.</p>
+    <div class="grid">
+
+      <div class="field">
+        <label for="p_nome">Nome</label>
+        <input type="text" id="p_nome" disabled>
+      </div>
+
+      <div class="field">
+        <label for="p_prefixo">Prefixo dos códigos</label>
+        <input type="text" id="p_prefixo" disabled>
+      </div>
+
+      <div class="field">
+        <label for="p_hini">Atendimento — início</label>
+        <input type="time" id="p_hini">
+      </div>
+
+      <div class="field">
+        <label for="p_hfim">Atendimento — fim</label>
+        <input type="time" id="p_hfim">
+      </div>
+
+      <div class="field">
+        <label for="p_cep">CEP <span id="p_cepStatus" class="cep-status"></span></label>
+        <input type="text" id="p_cep" placeholder="00000-000" inputmode="numeric" maxlength="9">
+      </div>
+
+      <div class="field">
+        <label for="p_numero">Número</label>
+        <input type="text" id="p_numero" placeholder="1234">
+      </div>
+
+      <div class="field full">
+        <label for="p_logradouro">Logradouro</label>
+        <input type="text" id="p_logradouro" placeholder="Preenchido pelo CEP">
+      </div>
+
+      <div class="field">
+        <label for="p_complemento">Complemento</label>
+        <input type="text" id="p_complemento" placeholder="Torre, andar, conjunto">
+      </div>
+
+      <div class="field">
+        <label for="p_bairro">Bairro</label>
+        <input type="text" id="p_bairro" placeholder="Preenchido pelo CEP">
+      </div>
+
+      <div class="field">
+        <label for="p_cidade">Cidade</label>
+        <input type="text" id="p_cidade" placeholder="Preenchido pelo CEP">
+      </div>
+
+      <div class="field">
+        <label for="p_uf">UF</label>
+        <input type="text" id="p_uf" placeholder="SP" maxlength="2">
+      </div>
+
+      <div class="field">
+        <label for="p_cnome">Contato — nome</label>
+        <input type="text" id="p_cnome" placeholder="Quem assina pelo edifício">
+      </div>
+
+      <div class="field">
+        <label for="p_ccargo">Contato — cargo</label>
+        <input type="text" id="p_ccargo" placeholder="Gerente predial, síndico…">
+      </div>
+
+      <div class="field">
+        <label for="p_ctel">Contato — telefone</label>
+        <input type="text" id="p_ctel" placeholder="(11) 90000-0000">
+      </div>
+
+      <div class="field">
+        <label for="p_cmail">Contato — e-mail</label>
+        <input type="text" id="p_cmail" placeholder="nome@dominio.com.br">
+      </div>
+
+    </div>
+    <div class="audit-line" id="p_leitura" hidden>
+      Somente leitura: alterar os dados de contrato é coisa de supervisor.
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="fecharPredio()">Fechar</button>
+      <button class="primary" id="p_btn" onclick="salvarPredio()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MODAL — RESULTADO DA IMPORTAÇÃO ===================== -->
 <div class="overlay" id="overlayImport">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="impTitle">
@@ -806,6 +908,8 @@ function daLinha(row) {
     acaoLegado:     row.acao || '',
     acao:           montaTextoAcao(row.id, row.acao || ''),
     data:           row.data_atividade,
+    os:             row.os || osDaData(row.data_atividade),
+    tipoAtendimento: row.tipo_atendimento || 'Contrato',
     responsavel:    row.responsavel || '',
     responsavel_id: row.responsavel_id,
     prioridade:     row.prioridade,
@@ -979,6 +1083,20 @@ function fmtBR(iso) {
   const [y,m,d] = iso.split('-');
   return `${d}/${m}/${y}`;
 }
+/* Número da OS: sai da data da atividade, no formato OSDDMMAAAA.
+   O banco também calcula (coluna gerada); aqui serve para mostrar antes
+   de salvar e como reserva se a coluna ainda não existir. */
+function osDaData(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-');
+  return y && m && d ? `OS${d}${m}${y}` : '';
+}
+
+/* "08:00:00" → "08:00"; vazio se não houver horário */
+function hhmm(t) {
+  return t ? String(t).slice(0, 5) : '';
+}
+
 function fmtStamp(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -1150,7 +1268,7 @@ async function iniciarSessao() {
   if (meu && meu.senha_trocada === false) return mostrarTrocaSenha();
   document.getElementById('userLabel').textContent = usuarioNome;
 
-  const { data: preds, error } = await db.from('predios').select('id, nome').order('nome');
+  const { data: preds, error } = await db.from('predios').select('*').order('nome');
   if (error) { toast('Erro ao carregar empreendimentos: ' + error.message); return; }
   PREDIOS = preds || [];
 
@@ -1170,6 +1288,159 @@ async function iniciarSessao() {
   if (achado) return entrar(achado);
 
   document.getElementById('gate').hidden = false;
+}
+
+/* =========================================================================
+   DADOS DO EMPREENDIMENTO
+   Horário de contrato e cabeçalho dos relatórios, editáveis pelo supervisor.
+   Nome e prefixo são só leitura: o prefixo comanda a numeração dos códigos.
+   ========================================================================= */
+const CAMPOS_PREDIO = {
+  p_cep:    'cep',        p_logradouro: 'logradouro', p_numero: 'numero',
+  p_complemento: 'complemento', p_bairro: 'bairro',   p_cidade: 'cidade',
+  p_uf:     'uf',
+  p_cnome:  'contato_nome',     p_ccargo: 'contato_cargo',
+  p_ctel:   'contato_telefone', p_cmail:  'contato_email',
+};
+
+/* ---------- CEP ----------
+   Consulta o ViaCEP e, se ele estiver fora do ar, tenta a BrasilAPI.
+   Ambos são públicos e sem cadastro. Se as duas falharem, é só digitar. */
+function soDigitos(s) { return String(s || '').replace(/\D/g, ''); }
+
+function fmtCep(s) {
+  const d = soDigitos(s).slice(0, 8);
+  return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+}
+
+/* Linha única do endereço — é o que vai no cabeçalho dos relatórios */
+function enderecoLinha(p) {
+  const rua   = [p.logradouro, p.numero].filter(Boolean).join(', ');
+  const local = [p.bairro, [p.cidade, p.uf].filter(Boolean).join('/')].filter(Boolean).join(', ');
+  return [rua, p.complemento, local, p.cep ? 'CEP ' + fmtCep(p.cep) : '']
+    .filter(Boolean).join(' — ');
+}
+
+async function consultaCep(cep) {
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    if (r.ok) {
+      const j = await r.json();
+      if (!j.erro) return { logradouro: j.logradouro, bairro: j.bairro,
+                            cidade: j.localidade, uf: j.uf };
+    }
+  } catch (e) { /* sem rede ou serviço fora: cai para o próximo */ }
+  try {
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v1/${cep}`);
+    if (r.ok) {
+      const j = await r.json();
+      return { logradouro: j.street, bairro: j.neighborhood, cidade: j.city, uf: j.state };
+    }
+  } catch (e) { /* idem */ }
+  return null;
+}
+
+let ultimoCep = '';
+
+async function buscarCep() {
+  const el  = document.getElementById('p_cep');
+  const st  = document.getElementById('p_cepStatus');
+  const cep = soDigitos(el.value);
+
+  if (cep.length !== 8) {
+    st.className = 'cep-status';
+    st.textContent = cep.length ? 'faltam dígitos' : '';
+    return;
+  }
+  if (cep === ultimoCep) return;      // não repete a consulta a cada tecla
+  ultimoCep = cep;
+
+  st.className = 'cep-status';
+  st.textContent = 'buscando…';
+
+  const d = await consultaCep(cep);
+  if (!d) {
+    st.className = 'cep-status erro';
+    st.textContent = 'não encontrado — digite à mão';
+    return;
+  }
+
+  /* CEP de cidade inteira vem sem rua: preenche o que veio, mantém o resto */
+  const põe = (id, v) => { if (v) document.getElementById(id).value = v; };
+  põe('p_logradouro', d.logradouro);
+  põe('p_bairro',     d.bairro);
+  põe('p_cidade',     d.cidade);
+  põe('p_uf',         d.uf);
+
+  st.className = 'cep-status ok';
+  st.textContent = 'encontrado';
+  if (!document.getElementById('p_numero').value) document.getElementById('p_numero').focus();
+}
+
+async function abrirPredio() {
+  if (!predio) return;
+
+  /* Relê do banco: outro supervisor pode ter mexido desde o login */
+  const { data: p, error } = await db.from('predios').select('*').eq('id', predio.id).single();
+  if (error) return toast('Não deu para abrir: ' + error.message);
+  Object.assign(predio, p);
+  const i = PREDIOS.findIndex(x => x.id === p.id);
+  if (i >= 0) PREDIOS[i] = { ...PREDIOS[i], ...p };
+
+  document.getElementById('p_nome').value    = p.nome || '';
+  document.getElementById('p_prefixo').value = p.prefixo || '';
+  document.getElementById('p_hini').value    = hhmm(p.horario_inicio);
+  document.getElementById('p_hfim').value    = hhmm(p.horario_fim);
+  Object.entries(CAMPOS_PREDIO).forEach(([id, col]) => {
+    document.getElementById(id).value = p[col] || '';
+  });
+  document.getElementById('p_cep').value = fmtCep(p.cep);
+  document.getElementById('p_cepStatus').textContent = '';
+  document.getElementById('p_cepStatus').className = 'cep-status';
+  ultimoCep = soDigitos(p.cep);
+
+  /* Técnico vê, supervisor edita */
+  const { data: sup } = await db.rpc('sou_supervisor', { p_predio: predio.id });
+  const podeEditar = sup === true;
+  ['p_hini','p_hfim', ...Object.keys(CAMPOS_PREDIO)].forEach(id => {
+    document.getElementById(id).disabled = !podeEditar;
+  });
+  document.getElementById('p_btn').hidden     = !podeEditar;
+  document.getElementById('p_leitura').hidden = podeEditar;
+
+  document.getElementById('overlayPredio').classList.add('open');
+}
+
+function fecharPredio() {
+  document.getElementById('overlayPredio').classList.remove('open');
+}
+
+async function salvarPredio() {
+  const btn = document.getElementById('p_btn');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const mud = {
+    horario_inicio: document.getElementById('p_hini').value || null,
+    horario_fim:    document.getElementById('p_hfim').value || null,
+  };
+  Object.entries(CAMPOS_PREDIO).forEach(([id, col]) => {
+    mud[col] = document.getElementById(id).value.trim() || null;
+  });
+  mud.cep = soDigitos(mud.cep) || null;          // guarda só os dígitos
+  mud.uf  = mud.uf ? mud.uf.toUpperCase() : null;
+
+  const { data, error } = await db.from('predios')
+    .update(mud).eq('id', predio.id).select('*').single();
+
+  btn.disabled = false; btn.textContent = 'Salvar';
+  if (error) return toast('Não salvou: ' + error.message);
+
+  Object.assign(predio, data);
+  const i = PREDIOS.findIndex(x => x.id === data.id);
+  if (i >= 0) PREDIOS[i] = { ...PREDIOS[i], ...data };
+
+  fecharPredio();
+  toast('Dados do empreendimento atualizados');
 }
 
 function abrirTrocaSenha() {
@@ -1737,6 +2008,7 @@ function openModal(id, finalizar) {
   document.getElementById('f_atividade').value    = r?.atividade || '';
   document.getElementById('f_diagnostico').value  = r?.diagnostico || '';
   document.getElementById('f_data').value         = r?.data || todayISO();
+  document.getElementById('f_os').value           = osDaData(r?.data || todayISO());
   document.getElementById('f_responsavel').value  = r?.responsavel_id || '';
   document.getElementById('f_prioridade').value   = r?.prioridade || 'Baixa';
   document.getElementById('f_categoria').value    = r?.categoria || 'Corretiva';
@@ -2525,6 +2797,23 @@ TODOS_CAMPOS.forEach(req => {
     document.getElementById(req.fld).classList.remove('invalid');
   });
 });
+
+/* A OS acompanha a data enquanto se digita: nada de salvar para descobrir */
+document.getElementById('f_data').addEventListener('change', e => {
+  document.getElementById('f_os').value = osDaData(e.target.value);
+});
+
+/* CEP: máscara enquanto digita e busca assim que os 8 dígitos entram */
+document.getElementById('p_cep').addEventListener('input', e => {
+  e.target.value = fmtCep(e.target.value);
+  if (soDigitos(e.target.value).length === 8) buscarCep();
+});
+document.getElementById('p_cep').addEventListener('blur', buscarCep);
+
+document.getElementById('overlayPredio').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharPredio();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharPredio(); });
 
 document.getElementById('a_texto').addEventListener('input', () => {
   document.getElementById('fld_acao').classList.remove('invalid');

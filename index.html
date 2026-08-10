@@ -484,6 +484,89 @@
   .live.on  .pt { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
   .live.off .pt { background: #d97706; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  /* ---------- ABAS ---------- */
+  .abas-topo { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid var(--line); }
+  .abas-topo button {
+    background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 500;
+    padding: 9px 14px; cursor: pointer;
+  }
+  .abas-topo button:hover { color: var(--text); }
+  .abas-topo button.on { color: var(--text); border-bottom-color: var(--accent); }
+  body.tv .abas-topo { display: none; }
+
+  /* ---------- DISPONIBILIDADE ---------- */
+  .disp-intro { font-size: 12.5px; color: var(--muted); margin-bottom: 16px; max-width: 70ch; }
+
+  .rodas { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+  .roda { display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex: 1 1 150px;
+          border: 1px solid var(--line-soft); border-radius: 10px; background: var(--panel); }
+  .roda svg { flex: none; }
+  .roda .txt { min-width: 0; }
+  .roda .sig { font-size: 13px; font-weight: 600; line-height: 1.2; }
+  .roda .det { font-size: 10px; color: var(--muted); font-family: 'Geist Mono', monospace;
+               white-space: nowrap; margin-top: 2px; }
+
+  .disp-sec { margin-bottom: 26px; }
+  .disp-sec > h3 { font-size: 12px; font-weight: 600; text-transform: uppercase;
+                   letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+
+  .disp-data { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; flex-wrap: wrap; }
+  .disp-data label { font-size: 12.5px; color: var(--muted); }
+  .disp-data input[type=date] {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text); font-family: inherit; font-size: 12.5px; padding: 7px 10px; outline: none;
+  }
+  .disp-data input[type=date]:focus { border-color: var(--accent); }
+  .disp-data .aviso { font-size: 11.5px; color: var(--amber); }
+
+  .disp-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .disp-tab th { text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase;
+                 letter-spacing: .07em; color: var(--muted); padding: 7px 9px;
+                 border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .disp-tab th.num, .disp-tab td.num { text-align: right; }
+
+  /* O formulário usa largura fixa: cabeçalho e campo compartilham a mesma
+     coluna, então precisam da mesma borda esquerda para não sair torto. */
+  #d_form { table-layout: fixed; }
+  #d_form col.c-marca { width: 36px; }
+  #d_form col.c-sis   { width: 92px; }
+  #d_form col.c-num   { width: 118px; }
+  #d_form col.c-pct   { width: 136px; }
+  #d_form td { padding-top: 4px; padding-bottom: 4px; }
+  .disp-tab td { padding: 5px 9px; border-bottom: 1px solid var(--line-soft); }
+  .disp-tab td.sig { font-weight: 600; white-space: nowrap; }
+  .disp-tab input[type=number], .disp-tab input[type=text] {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text); font-family: 'Geist Mono', monospace; font-size: 12px;
+    padding: 5px 7px; outline: none; width: 100%;
+  }
+  .disp-tab input[type=text] { font-family: inherit; }
+  .disp-tab input:focus { border-color: var(--accent); }
+  .disp-tab input.mexido { border-color: var(--accent); background: var(--accent-soft); }
+  .disp-tab td.pct { font-family: 'Geist Mono', monospace; text-align: right; white-space: nowrap; }
+  .disp-tab td.pct.ok    { color: var(--accent-hi); }
+  .disp-tab td.pct.medio { color: var(--amber); }
+  .disp-tab td.pct.ruim  { color: var(--red); }
+  .disp-tab td.ops { text-align: right; white-space: nowrap; }
+  .disp-tab td.ops button { background: none; border: 0; color: var(--muted); cursor: pointer;
+                            font-size: 13px; padding: 1px 5px; border-radius: 5px; }
+  .disp-tab td.ops button:hover { color: var(--red); background: rgba(255,255,255,.08); }
+  .disp-tab col.marca { width: 34px; }
+
+  .disp-acoes { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .disp-acoes .conta { font-size: 11.5px; color: var(--muted); }
+  .disp-acoes button:disabled { opacity: .4; cursor: not-allowed; }
+  .disp-acoes button:disabled:hover { background: var(--accent); border-color: var(--accent); }
+
+  .disp-desc { margin-top: 6px; }
+  .disp-desc select, .disp-desc textarea {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text); font-family: inherit; font-size: 12.5px; padding: 8px 10px; outline: none;
+  }
+  .disp-desc textarea { width: 100%; min-height: 70px; resize: vertical; margin-top: 8px; }
+  .disp-desc select:focus, .disp-desc textarea:focus { border-color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -592,6 +675,12 @@
 </header>
 
 <main>
+  <nav class="abas-topo">
+    <button id="tabAcoes" class="on" type="button" onclick="trocarAba('acoes')">Ações</button>
+    <button id="tabDisp"  type="button" onclick="trocarAba('disp')">Disponibilidade</button>
+  </nav>
+
+<section id="paneAcoes">
   <div class="toolbar">
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -614,6 +703,7 @@
         <button onclick="fecharMenuArq(); exportXLSX(false)">Exportar Excel</button>
         <button id="btnXlsxFiltro" onclick="fecharMenuArq(); exportXLSX(true)" hidden>Exportar Excel (só o filtrado)</button>
         <button onclick="fecharMenuArq(); exportCSV()">Exportar CSV</button>
+        <button onclick="fecharMenuArq(); exportDisponibilidade()">Exportar disponibilidade</button>
         <button onclick="fecharMenuArq(); exportJSON()">Exportar JSON</button>
         <button onclick="fecharMenuArq(); baixarModelo()">Baixar modelo de importação</button>
         <button onclick="fecharMenuArq(); document.getElementById('importFile').click()">Importar planilha</button>
@@ -649,6 +739,65 @@
     </div>
   </div>
   <div class="result-count" id="resultCount"></div>
+</section>
+
+<section id="paneDisp" hidden>
+  <p class="disp-intro">
+    A disponibilidade de cada sistema, digitada. Três números por sistema —
+    quantos pontos existem, quantos estão fora de uso e quantos estão em falha —
+    e o percentual sai deles. Ponto fora de uso não conta como disponível nem como
+    falha: ele sai dos dois lados da conta.
+  </p>
+
+  <div class="rodas" id="d_rodas"></div>
+
+  <div class="disp-sec">
+    <h3>Lançar medição</h3>
+    <div class="disp-data">
+      <label for="d_data">Data da leitura</label>
+      <input type="date" id="d_data">
+      <span class="aviso" id="d_avisoData" hidden></span>
+    </div>
+    <table class="disp-tab" id="d_form">
+      <colgroup>
+        <col class="c-marca"><col class="c-sis">
+        <col class="c-num"><col class="c-num"><col class="c-num">
+        <col class="c-pct"><col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Sistema</th>
+          <th>Pontos</th>
+          <th>Fora de uso</th>
+          <th>Com falha</th>
+          <th class="num">Disponibilidade</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody id="d_formCorpo"></tbody>
+    </table>
+    <div class="disp-acoes">
+      <button class="primary" id="d_salvar" onclick="salvarMedicoes()">Salvar medições</button>
+      <span class="conta" id="d_contaSel">Marque um sistema ou edite um número para lançar</span>
+    </div>
+  </div>
+
+  <div class="disp-sec" id="d_secDesc" hidden>
+    <h3>Descrição da infraestrutura</h3>
+    <p class="disp-intro" style="margin-bottom:8px">
+      Texto que entra no relatório mensal, por sistema. Só supervisor edita.
+    </p>
+    <div class="disp-desc">
+      <select id="d_descSis" onchange="carregarDescricao()"></select>
+      <textarea id="d_desc" placeholder="Como o sistema é montado: centrais, servidores, topologia…"></textarea>
+      <div class="disp-acoes">
+        <button class="primary" onclick="salvarDescricao()">Salvar descrição</button>
+      </div>
+    </div>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -1100,6 +1249,7 @@ function ligarTempoReal() {
   canalAcoes = db.channel('acoes-ao-vivo')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'acoes' }, aplicarMudanca)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'andamentos' }, aplicarMudancaAndamento)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'medicoes' }, aplicarMudancaMedicao)
     .subscribe(status => {
       marcarLive(status === 'SUBSCRIBED' ? 'on' : 'off');
     });
@@ -1935,6 +2085,8 @@ function entrar(p) {
 function trocarPredio() {
   if (PREDIOS.length < 2) return;
   predio = null;
+  SISTEMAS = []; MEDICOES = []; DISPONIB = [];
+  trocarAba('acoes');
   try { localStorage.removeItem(PREDIO_KEY); } catch (e) {}
   document.getElementById('app').hidden = true;
   document.getElementById('gate').hidden = false;
@@ -2155,6 +2307,7 @@ let modoTv = false;
 
 function toggleTv() {
   modoTv = !modoTv;
+  if (modoTv && abaAtual !== 'acoes') trocarAba('acoes');
   document.body.classList.toggle('tv', modoTv);
   document.getElementById('btnTv').textContent = modoTv ? 'Sair da apresentação' : 'Modo apresentação';
   if (!modoTv) document.getElementById('tvDesde').value = '';
@@ -2635,6 +2788,327 @@ async function deleteRecord() {
 /* =========================================================================
    IMPORT / EXPORT
    ========================================================================= */
+
+/* =========================================================================
+   ABA DE DISPONIBILIDADE
+
+   A conta é uma só, e vale para todos os sistemas:
+
+       disponibilidade = (pontos − fora de uso − com falha)
+                         ────────────────────────────────────
+                              (pontos − fora de uso)
+
+   Fora de uso sai dos dois lados: um ponto desativado não conta como
+   disponível nem como falha. É o que as planilhas já faziam com os N/A
+   do BMS e os Inativo do CFTV — aqui virou regra única, escrita uma vez.
+   ========================================================================= */
+let SISTEMAS = [];   // sistemas do empreendimento aberto
+let MEDICOES = [];   // histórico completo desses sistemas
+let DISPONIB = [];   // view: a medição mais recente de cada sistema
+let abaAtual = 'acoes';
+
+function pct(total, fora, falha) {
+  const base = (total || 0) - (fora || 0);
+  if (base <= 0) return null;
+  return Math.round(10000 * (base - (falha || 0)) / base) / 100;
+}
+
+function classePct(p) {
+  if (p === null) return '';
+  return p >= 98 ? 'ok' : p >= 90 ? 'medio' : 'ruim';
+}
+
+async function carregarDisponibilidade() {
+  if (!predio) return;
+
+  const [rs, rd] = await Promise.all([
+    db.from('sistemas').select('*').eq('predio_id', predio.id).order('ordem'),
+    db.from('disponibilidade').select('*').eq('predio_id', predio.id).order('ordem'),
+  ]);
+  if (rs.error) { toast('Erro ao carregar sistemas: ' + rs.error.message); return; }
+
+  SISTEMAS = rs.data || [];
+  DISPONIB = rd.data || [];
+
+  const ids = SISTEMAS.map(s => s.id);
+  if (ids.length) {
+    const rm = await db.from('medicoes').select('*').in('sistema_id', ids).order('data', { ascending: false });
+    MEDICOES = rm.data || [];
+  } else {
+    MEDICOES = [];
+  }
+}
+
+/* Anel de disponibilidade: um círculo com o traço cortado na proporção */
+function roda(d) {
+  const p = d.percentual === null || d.percentual === undefined ? null : Number(d.percentual);
+  const C = 2 * Math.PI * 15;
+  const frac = p === null ? 0 : Math.max(0, Math.min(100, p)) / 100;
+  const cor = p === null ? 'var(--muted)'
+            : p >= 98 ? 'var(--accent-hi)'
+            : p >= 90 ? 'var(--amber)' : 'var(--red)';
+  const det = p === null ? 'sem medição'
+            : `${d.disponiveis} de ${d.considerados} · ${fmtBR(d.medido_em)}`;
+
+  return `<div class="roda">
+    <svg width="42" height="42" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="15" fill="none" stroke="var(--line)" stroke-width="4"></circle>
+      <circle cx="20" cy="20" r="15" fill="none" stroke="${cor}" stroke-width="4"
+              stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}"
+              stroke-linecap="round" transform="rotate(-90 20 20)"></circle>
+      <text x="20" y="21.5" text-anchor="middle" dominant-baseline="middle"
+            fill="var(--text)" font-size="9.5" font-family="'Geist Mono', monospace">
+        ${p === null ? '—' : Math.round(p)}
+      </text>
+    </svg>
+    <div class="txt">
+      <div class="sig">${esc(d.sigla)}</div>
+      <div class="det">${esc(det)}</div>
+    </div>
+  </div>`;
+}
+
+/* Última medição conhecida de um sistema, para pré-preencher o formulário */
+function ultimaMedicao(sistemaId) {
+  return MEDICOES.find(m => m.sistema_id === sistemaId) || null;
+}
+
+function renderFormulario() {
+  const corpo = document.getElementById('d_formCorpo');
+  if (!SISTEMAS.length) {
+    corpo.innerHTML = `<tr><td colspan="7"><div class="hist-vazio">
+      Nenhum sistema cadastrado neste empreendimento.</div></td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = SISTEMAS.map(s => {
+    const u = ultimaMedicao(s.id);
+    const t = u ? u.total_pontos : '';
+    const f = u ? u.fora_de_uso : 0;
+    const n = u ? u.com_falha : 0;
+    const p = pct(t, f, n);
+    return `<tr data-sis="${esc(s.id)}">
+      <td><input type="checkbox" class="d-marca" onchange="atualizarContaSel()"></td>
+      <td class="sig" title="${esc(s.nome || '')}">${esc(s.sigla)}</td>
+      <td><input type="number" min="0" step="1" class="d-total" value="${t}" oninput="mexeuLinha(this)"></td>
+      <td><input type="number" min="0" step="1" class="d-fora"  value="${f}" oninput="mexeuLinha(this)"></td>
+      <td><input type="number" min="0" step="1" class="d-falha" value="${n}" oninput="mexeuLinha(this)"></td>
+      <td class="pct ${classePct(p)}">${p === null ? '—' : p.toFixed(2).replace('.', ',') + ' %'}</td>
+      <td><input type="text" class="d-obs" placeholder="opcional" oninput="mexeuLinha(this)"></td>
+    </tr>`;
+  }).join('');
+
+  atualizarContaSel();
+}
+
+/* Editar um número marca a linha sozinho: ninguém precisa lembrar do check */
+function mexeuLinha(campo) {
+  const tr = campo.closest('tr');
+  tr.querySelector('.d-marca').checked = true;
+  campo.classList.add('mexido');
+  recalcularLinha(tr);
+  atualizarContaSel();
+}
+
+function recalcularLinha(tr) {
+  const num = cls => {
+    const v = tr.querySelector(cls).value;
+    return v === '' ? null : Number(v);
+  };
+  const t = num('.d-total'), f = num('.d-fora') ?? 0, n = num('.d-falha') ?? 0;
+  const cel = tr.querySelector('.pct');
+  const p = t === null ? null : pct(t, f, n);
+  cel.textContent = p === null ? '—' : p.toFixed(2).replace('.', ',') + ' %';
+  cel.className = 'pct ' + classePct(p);
+}
+
+function atualizarContaSel() {
+  const n = document.querySelectorAll('#d_formCorpo .d-marca:checked').length;
+  document.getElementById('d_contaSel').textContent = n
+    ? `${n} sistema${n > 1 ? 's' : ''} será${n > 1 ? 'ão' : ''} lançado${n > 1 ? 's' : ''} nesta data`
+    : 'Marque um sistema ou edite um número para lançar';
+  document.getElementById('d_salvar').disabled = !n;
+}
+
+async function salvarMedicoes() {
+  const data = document.getElementById('d_data').value;
+  if (!data) { document.getElementById('d_data').focus(); return toast('Informe a data da leitura'); }
+
+  const linhas = [];
+  let problema = null;
+
+  document.querySelectorAll('#d_formCorpo tr').forEach(tr => {
+    if (!tr.querySelector('.d-marca').checked) return;
+    const sis   = tr.dataset.sis;
+    const sigla = tr.querySelector('.sig').textContent;
+    const total = tr.querySelector('.d-total').value;
+    const fora  = Number(tr.querySelector('.d-fora').value  || 0);
+    const falha = Number(tr.querySelector('.d-falha').value || 0);
+
+    if (total === '') { problema = problema || `${sigla}: informe quantos pontos o sistema tem`; return; }
+    if (fora + falha > Number(total)) {
+      problema = problema || `${sigla}: fora de uso + com falha passa do total de pontos`;
+      return;
+    }
+    linhas.push({
+      sistema_id: sis, data,
+      total_pontos: Number(total), fora_de_uso: fora, com_falha: falha,
+      observacoes: tr.querySelector('.d-obs').value.trim() || null,
+    });
+  });
+
+  if (problema) return toast(problema);
+  if (!linhas.length) return toast('Nenhum sistema marcado');
+
+  const btn = document.getElementById('d_salvar');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const { error } = await db.from('medicoes').upsert(linhas, { onConflict: 'sistema_id,data' });
+
+  btn.disabled = false; btn.textContent = 'Salvar medições';
+  if (error) return toast('Não salvou: ' + error.message);
+
+  await carregarDisponibilidade();
+  renderDisponibilidade();
+  toast(`${linhas.length} medição${linhas.length > 1 ? 'ões' : ''} registrada${linhas.length > 1 ? 's' : ''} em ${fmtBR(data)}`);
+}
+
+function carregarDescricao() {
+  const s = SISTEMAS.find(x => x.id === document.getElementById('d_descSis').value);
+  document.getElementById('d_desc').value = s ? (s.descricao || '') : '';
+}
+
+async function salvarDescricao() {
+  const id = document.getElementById('d_descSis').value;
+  if (!id) return;
+  const { error } = await db.from('sistemas')
+    .update({ descricao: document.getElementById('d_desc').value.trim() || null })
+    .eq('id', id);
+  if (error) return toast('Não salvou: ' + error.message);
+
+  await carregarDisponibilidade();
+  renderDisponibilidade();
+  toast('Descrição atualizada');
+}
+
+function renderDisponibilidade() {
+  document.getElementById('d_rodas').innerHTML =
+    DISPONIB.length ? DISPONIB.map(roda).join('')
+                    : '<div class="hist-vazio">Nenhum sistema cadastrado neste empreendimento.</div>';
+
+  renderFormulario();
+
+  const secDesc = document.getElementById('d_secDesc');
+  secDesc.hidden = !souSupervisor || !SISTEMAS.length;
+  if (!secDesc.hidden) {
+    const dsel = document.getElementById('d_descSis');
+    const antesD = dsel.value;
+    dsel.innerHTML = SISTEMAS.map(s =>
+      `<option value="${esc(s.id)}">${esc(s.sigla)} — ${esc(s.nome || '')}</option>`).join('');
+    dsel.value = antesD || (SISTEMAS[0] && SISTEMAS[0].id);
+    carregarDescricao();
+  }
+}
+
+async function trocarAba(qual) {
+  abaAtual = qual;
+  document.getElementById('paneAcoes').hidden = qual !== 'acoes';
+  document.getElementById('paneDisp').hidden  = qual !== 'disp';
+  document.getElementById('tabAcoes').classList.toggle('on', qual === 'acoes');
+  document.getElementById('tabDisp').classList.toggle('on', qual === 'disp');
+
+  if (qual === 'disp') {
+    if (!document.getElementById('d_data').value) {
+      document.getElementById('d_data').value = new Date().toISOString().slice(0, 10);
+    }
+    await carregarDisponibilidade();
+    renderDisponibilidade();
+  }
+}
+
+/* Mudança de outro usuário: só recarrega se a aba estiver à vista */
+let dispTimer = null;
+function aplicarMudancaMedicao() {
+  if (abaAtual !== 'disp') return;
+  clearTimeout(dispTimer);
+  dispTimer = setTimeout(async () => {
+    await carregarDisponibilidade();
+    renderDisponibilidade();
+  }, 400);
+}
+
+async function exportDisponibilidade() {
+  if (typeof ExcelJS === 'undefined') return toast('Biblioteca do Excel não carregou. Recarregue a página.');
+  if (!SISTEMAS.length) await carregarDisponibilidade();
+  if (!SISTEMAS.length) return toast('Nada para exportar');
+
+  const wb = new ExcelJS.Workbook();
+  wb.created = new Date();
+
+  const r1 = wb.addWorksheet('Disponibilidade', { views: [{ state: 'frozen', ySplit: 1 }] });
+  r1.columns = [
+    { header: 'Sistema', width: 10 }, { header: 'Nome', width: 32 },
+    { header: 'Pontos', width: 10 }, { header: 'Fora de uso', width: 12 },
+    { header: 'Com falha', width: 11 }, { header: 'Disponíveis', width: 12 },
+    { header: 'Disponibilidade', width: 15 }, { header: 'Medido em', width: 12 },
+  ];
+  DISPONIB.forEach(d => r1.addRow([
+    d.sigla, d.nome || '', d.total_pontos ?? '', d.fora_de_uso ?? '', d.com_falha ?? '',
+    d.disponiveis ?? '',
+    d.percentual === null || d.percentual === undefined ? '' : Number(d.percentual) / 100,
+    d.medido_em ? paraData(d.medido_em) : '',
+  ]));
+
+  const nomes = Object.fromEntries(SISTEMAS.map(s => [s.id, s.sigla]));
+  const r2 = wb.addWorksheet('Histórico', { views: [{ state: 'frozen', ySplit: 1 }] });
+  r2.columns = [
+    { header: 'Data', width: 12 }, { header: 'Sistema', width: 10 },
+    { header: 'Pontos', width: 10 }, { header: 'Fora de uso', width: 12 },
+    { header: 'Com falha', width: 11 }, { header: 'Disponibilidade', width: 15 },
+    { header: 'Observação', width: 40 },
+  ];
+  MEDICOES.slice().sort((a, b) => a.data.localeCompare(b.data)).forEach(m => {
+    const p = pct(m.total_pontos, m.fora_de_uso, m.com_falha);
+    r2.addRow([paraData(m.data), nomes[m.sistema_id] || '', m.total_pontos, m.fora_de_uso,
+               m.com_falha, p === null ? '' : p / 100, m.observacoes || '']);
+  });
+
+  wb.eachSheet(ws => {
+    const cab = ws.getRow(1);
+    cab.height = 24;
+    cab.eachCell(cel => {
+      cel.font      = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cel.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+      cel.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cel.border    = BORDA_FINA;
+    });
+    ws.eachRow((linha, i) => {
+      if (i === 1) return;
+      linha.eachCell({ includeEmpty: true }, cel => {
+        cel.font      = { name: 'Arial', size: 10 };
+        cel.border    = BORDA_FINA;
+        cel.alignment = { vertical: 'middle', wrapText: true };
+      });
+    });
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: ws.columnCount } };
+  });
+
+  r1.getColumn(7).numFmt = '0.00%';
+  r1.getColumn(8).numFmt = 'dd/mm/yyyy';
+  r2.getColumn(1).numFmt = 'dd/mm/yyyy';
+  r2.getColumn(6).numFmt = '0.00%';
+
+  const buf  = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `disponibilidade_${slug(predio.nome)}_${stamp()}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Disponibilidade exportada');
+}
+
 function download(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
   const a = document.createElement('a');
